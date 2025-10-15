@@ -1,0 +1,73 @@
+extends layout
+
+block content
+  section.card
+    if error
+      .alert.alert-error= error
+    
+    if success
+      .alert.alert-success= success
+    
+    if !accepted
+      .center.mb-32
+        h1.title Accountability Partner Invitation
+        
+        if partner
+          p.lead
+            | You've been invited by 
+            strong= partner.user.firstName + ' ' + partner.user.lastName
+            |  (#{partner.user.email}) to be their accountability partner on UpHold.
+          
+          p.muted.mt-24
+            | As their 
+            strong.lead(style="font-size:1rem;")= partner.relationship.toLowerCase()
+            | , you would receive progress updates to help support their journey toward healthier digital habits.
+        else
+          p.lead Invalid or expired invitation.
+
+      if partner
+        .mb-32
+          h2(style="font-size: 1.125rem; font-weight: 700; margin: 0 0 .75rem;") What you'll receive:
+          ul(style="color: var(--wellness-gray); list-style: disc; padding-left: 1.5rem;")
+            if partner.weeklyReports
+              li Weekly progress reports
+            if partner.streakUpdates  
+              li Streak milestone notifications
+            if partner.emergencyAlerts
+              li Emergency alerts when support is needed
+            if partner.detailedBreakdown
+              li Detailed breakdown of their progress
+
+        form(method="POST")
+          .form-group
+            label(for="partnerName") Your Name
+            input.form-control(
+              type="text" 
+              id="partnerName" 
+              name="partnerName" 
+              value=partner.partnerName || ''
+              required
+              placeholder="Enter your full name"
+            )
+          
+          .form-group
+            label(for="email") Your Email
+            input.form-control(
+              type="email" 
+              id="email" 
+              name="email" 
+              value=partner.partnerEmail || ''
+              required
+              placeholder="Enter your email address"
+            )
+
+          button.btn(type="submit") Accept Invitation & Support #{partner.user.firstName}
+          
+          .mt-24
+            a.btn.btn-secondary(href="#" onclick="history.back()") Decline Invitation
+    else
+      .center
+        h1.title Welcome to the Team!
+        p.lead You've successfully accepted the invitation to support #{partner.user.firstName}'s digital wellness journey.
+        p.muted You'll receive updates according to the permissions they've set.
+        

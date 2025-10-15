@@ -1,0 +1,72 @@
+extends layout
+
+block content
+  .card.center
+    if error
+      .alert.alert-error
+        h3 ⚠️ Error
+        p= error
+    else
+      .alert.alert-success
+        h3 ✅ Payment Successful!
+        p Your subscription has been activated successfully.
+    
+    h1.title Welcome to UpHold Premium!
+    
+    if session && session.customer_details && session.customer_details.email
+      p.lead Thank you, #{session.customer_details.email}!
+    else
+      p.lead Thank you for your payment!
+    
+    if amount && currency
+      p.muted 
+        strong Amount Paid: #{currency} #{amount}
+    
+    if subscription
+      .mt-24
+        h3 Subscription Details
+        p 
+          strong Status: 
+          span(class=subscription.status === 'active' ? 'text-green-600' : 'text-yellow-600')= subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)
+        
+        if subscription.current_period_end
+          p 
+            strong Next Billing Date: 
+            = new Date(subscription.current_period_end * 1000).toLocaleDateString()
+        
+        if subscription.items && subscription.items.data && subscription.items.data[0]
+          - const item = subscription.items.data[0]
+          if item.price && item.price.nickname
+            p 
+              strong Plan: 
+              = item.price.nickname
+          else if item.price && item.price.unit_amount
+            p 
+              strong Plan: 
+              = item.price.currency.toUpperCase() + ' ' + (item.price.unit_amount / 100).toFixed(2) + '/' + item.price.recurring.interval
+    
+    .mt-24
+      h3 What's Next?
+      p.muted You now have access to all premium features including:
+      ul.muted(style="text-align: left; max-width: 400px; margin: 1rem auto;")
+        li Advanced habit tracking
+        li Detailed analytics and insights  
+        li Priority customer support
+        li Unlimited accountability partners
+        li Custom goal setting
+
+  style.
+    .text-green-600 { color: #16a34a; }
+    .text-yellow-600 { color: #ca8a04; }
+    code {
+      background: #f3f4f6;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    ul {
+      padding-left: 1.5rem;
+    }
+    ul li {
+      margin-bottom: 0.5rem;
+    }
