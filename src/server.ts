@@ -33,7 +33,12 @@ app.set("views", path.join(process.cwd(), "views"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://abio.site"],
+    credentials: true,
+  })
+);
 app.use(helmet());
 
 // Routes
