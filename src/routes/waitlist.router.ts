@@ -11,6 +11,6 @@ waitlistRouter.post(
   WaitlistController.create
 );
 
-waitlistRouter.get("/", WaitlistController.getAll);
+waitlistRouter.get("/jzI27AUJTCKU", WaitlistController.getAll);
 
 export default waitlistRouter;
