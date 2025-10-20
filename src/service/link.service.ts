@@ -38,13 +38,16 @@ export class LinkService {
       select: { displayOrder: true },
     });
 
-    // Detect platform from URL
-    const platform = this.detectPlatform(data.url);
+    // Detect platform from URL or use provided platform
+    const detectedPlatform = this.detectPlatform(data.url);
+    const platform = detectedPlatform || data.platform || null;
 
     const link = await prisma.link.create({
       data: {
-        ...data,
+        title: data.title,
+        url: data.url,
         platform,
+        isVisible: data.isVisible ?? true,
         profileId: profile.id,
         displayOrder: (maxOrder?.displayOrder ?? -1) + 1,
       },
@@ -111,10 +114,13 @@ export class LinkService {
       );
     }
 
-    // Re-detect platform if URL is being updated
+    // Re-detect platform if URL is being updated, or use provided platform
     const updateData: any = { ...data };
     if (data.url) {
-      updateData.platform = this.detectPlatform(data.url);
+      const detectedPlatform = this.detectPlatform(data.url);
+      updateData.platform = detectedPlatform || data.platform || null;
+    } else if (data.platform) {
+      updateData.platform = data.platform;
     }
 
     const updatedLink = await prisma.link.update({
