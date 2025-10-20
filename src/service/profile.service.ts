@@ -53,7 +53,18 @@ export class ProfileService {
   async getPublicByUsername(username: string) {
     const profile = await prisma.profile.findUnique({
       where: { username, isPublic: true },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        username: true,
+        displayName: true,
+        bio: true,
+        location: true,
+        avatarUrl: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
+        // Exclude goals from public profile
         links: {
           where: { isVisible: true },
           orderBy: { displayOrder: "asc" },
