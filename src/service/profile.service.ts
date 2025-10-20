@@ -64,16 +64,10 @@ export class ProfileService {
         isPublic: true,
         createdAt: true,
         updatedAt: true,
-        // Exclude goals from public profile
+        // Exclude goals and user details from public profile
         links: {
           where: { isVisible: true },
           orderBy: { displayOrder: "asc" },
-        },
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-          },
         },
       },
     });
