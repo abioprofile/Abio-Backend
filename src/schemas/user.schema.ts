@@ -20,10 +20,6 @@ export const createUserSchema = z.object({
       passwordConfirm: z.string({
         required_error: "Password Confirm is required",
       }),
-      phoneNumber: zPhone.optional(),
-      profile: z.object({
-        
-      }),
     })
     .refine((data) => data.password === data.passwordConfirm, {
       path: ["passwordConfirm"],

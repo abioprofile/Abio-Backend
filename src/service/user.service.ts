@@ -6,6 +6,9 @@ import { TLogin, TCreateUser, TUpdateUser } from "@/schemas/index";
 import env from "@/env";
 import { prisma } from "@/server";
 import { UserWithProfile, LoginResult } from "@/types";
+import { User } from "@prisma/client";
+import { AppError } from "@/utils/appError";
+import { customAlphabet } from "nanoid";
 
 const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;
@@ -15,21 +18,59 @@ const signToken = (id: string): string => {
 };
 
 export class UserService {
-  // Retrieves all users from the database
-  async findAll(): Promise<ServiceResponse<UserWithProfile[]>> {
-    const users = await prisma.user.findMany({
-      where: { active: true },
+  async create(
+    payload: TCreateUser
+  ): Promise<ServiceResponse<UserWithProfile | null>> {
+    // Check if user with this email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: payload.email },
+    });
+
+    if (existingUser) {
+      throw new AppError(
+        "A user with this email already exists.",
+        StatusCodes.CONFLICT
+      );
+    }
+
+    // Hash the password before storing
+    const hashedPassword = await this.hashPassword(payload.password);
+
+    // Create user with profile in a transaction
+    const newUser = await prisma.user.create({
+      data: {
+        email: payload.email,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        password: hashedPassword,
+      },
+      include: {
+        profile: true,
+      },
+    });
+
+    return ServiceResponse.success(
+      "User created successfully",
+      newUser,
+      StatusCodes.CREATED
+    );
+  }
+
+  async findById(id: string): Promise<ServiceResponse<UserWithProfile | null>> {
+    const user = await prisma.user.findUnique({
+      where: { id },
       include: { profile: true },
     });
 
-    if (!users || users.length === 0) {
-      return ServiceResponse.failure<UserWithProfile[]>(
-        "No Users found",
-        [],
-        StatusCodes.OK
+    if (!user) {
+      return ServiceResponse.failure(
+        "User not found",
+        null,
+        StatusCodes.NOT_FOUND
       );
     }
-    return ServiceResponse.success("Users retrieved successfully", users);
+
+    return ServiceResponse.success("User retrieved successfully", user);
   }
 
   async update(data: {
@@ -85,7 +126,7 @@ export class UserService {
       );
     }
 
-    if (!(await bcrypt.compare(user.password, foundUser.password))) {
+    if (!(await this.comparePassword(user.password, foundUser.password))) {
       return ServiceResponse.failure<LoginResult | null>(
         "Incorrect email or password",
         null,
@@ -110,6 +151,12 @@ export class UserService {
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
+  }
+
+  async generateOTP() {
+    const alphabet = "0123456789";
+    const nanoid = customAlphabet(alphabet, 6);
+    return nanoid();
   }
 }
 

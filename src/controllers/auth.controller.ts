@@ -36,7 +36,6 @@ class AuthController {
           lastName: true,
           email: true,
           active: true,
-          phoneNumber: true,
           password: true, // Need this for comparison
           createdAt: true,
           updatedAt: true,

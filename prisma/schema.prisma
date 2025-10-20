@@ -26,7 +26,7 @@ model User {
   email                String    @unique
   active               Boolean   @default(true)
   password             String
-  phoneNumber          String?
+  isEmailVerified    Boolean @default(false)
   passwordChangedAt    DateTime? @db.Timestamptz(6)
   passwordResetToken   String?
   passwordResetExpires DateTime? @db.Timestamptz(6)
@@ -45,7 +45,6 @@ model Profile {
   createdAt                DateTime  @db.Timestamptz(6) @default(now())
   updatedAt                DateTime  @db.Timestamptz(6) @updatedAt
   
-
   // Relations
   user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("profiles")

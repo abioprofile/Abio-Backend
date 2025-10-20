@@ -25,7 +25,6 @@ export interface LoginResult {
     lastName: string;
     email: string;
     active: boolean;
-    phoneNumber: string | null;
     createdAt: Date;
     updatedAt: Date;
   };
