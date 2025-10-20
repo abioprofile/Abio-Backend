@@ -16,8 +16,15 @@ userRouter.post(
 );
 
 // Protected routes - require authentication
-userRouter.get("/me", authenticate, UserController.getLoggedInUser);
+userRouter.get("/", authenticate, UserController.getLoggedInUser);
 
+// Profile routes
 userRouter.get("/profile", authenticate, ProfileController.getMyProfile);
+userRouter.patch(
+  "/profile",
+  authenticate,
+  validateRequest(updateProfileSchema),
+  ProfileController.updateMyProfile
+);
 
 export default userRouter;

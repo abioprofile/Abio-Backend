@@ -44,12 +44,42 @@ model User {
 model Profile {
   id                        String    @id @default(uuid())
   userId                    String    @unique
-  createdAt                DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt                DateTime  @db.Timestamptz(6) @updatedAt
+  username                  String?   @unique
+  displayName               String?
+  bio                       String?   @db.Text
+  location                  String?
+  goals                     String[]  @default([])
+  avatarUrl                 String?
+  theme                     String?   @default("default")
+  isPublic                  Boolean   @default(true)
+  createdAt                 DateTime  @db.Timestamptz(6) @default(now())
+  updatedAt                 DateTime  @db.Timestamptz(6) @updatedAt
   
   // Relations
-  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links                     Link[]
+  
   @@map("profiles")
+}
+
+model Link {
+  id                        String    @id @default(uuid())
+  profileId                 String
+  title                     String
+  url                       String
+  platform                  String?
+  displayOrder              Int       @default(0)
+  isVisible                 Boolean   @default(true)
+  clickCount                Int       @default(0)
+  createdAt                 DateTime  @db.Timestamptz(6) @default(now())
+  updatedAt                 DateTime  @db.Timestamptz(6) @updatedAt
+  
+  // Relations
+  profile                   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("links")
+  @@index([profileId])
+  @@index([displayOrder])
 }
 
 

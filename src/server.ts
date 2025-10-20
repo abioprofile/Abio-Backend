@@ -10,6 +10,8 @@ import globalErrorHandler, {
 import authRouter from "@/routes/auth.router";
 import userRouter from "@/routes/user.router";
 import waitlistRouter from "@/routes/waitlist.router";
+import linkRouter from "@/routes/link.router";
+import publicRouter from "@/routes/public.router";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import env from "@/env";
@@ -45,6 +47,8 @@ app.use(helmet());
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/waitlist", waitlistRouter);
+app.use("/api/v1/links", linkRouter);
+app.use("/api/v1/public", publicRouter);
 
 // Error handlers
 app.use(unexpectedRequest);
