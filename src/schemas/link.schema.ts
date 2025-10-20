@@ -10,10 +10,7 @@ export const createLinkSchema = z.object({
       .max(100, "Title must be 100 characters or less"),
     url: z
       .string({ required_error: "URL is required" })
-      .regex(
-        urlRegex,
-        "Invalid URL format - must start with http:// or https://"
-      ),
+      .url("Invalid URL format - must start with http:// or https://"),
     isVisible: z.boolean().default(true).optional(),
   }),
 });
