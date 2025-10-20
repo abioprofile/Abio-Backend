@@ -48,6 +48,7 @@ class AuthController {
         !user ||
         !(await userService.comparePassword(password as string, user.password))
       ) {
+        
         return next(new AppError("Incorrect email or password", 401));
       }
 

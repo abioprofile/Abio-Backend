@@ -35,9 +35,6 @@ export class UserService {
       );
     }
 
-    // Hash the password before storing
-    const hashedPassword = await this.hashPassword(payload.password);
-
     // Generate OTP for email verification
     const verificationOTP = await this.generateOTP();
     const hashedToken = crypto
@@ -45,13 +42,13 @@ export class UserService {
       .update(verificationOTP)
       .digest("hex");
 
-    // Create user first
+    // Create user first (password will be hashed by Prisma middleware)
     const user = await prisma.user.create({
       data: {
         email: payload.email,
         firstName: payload.firstName,
         lastName: payload.lastName,
-        password: hashedPassword,
+        password: payload.password,
         emailVerificationToken: hashedToken,
         emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       },
