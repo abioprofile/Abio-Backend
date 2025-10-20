@@ -41,3 +41,20 @@ export type {
 
 // Re-export browser history types
 export type { CategorizeRequest } from "./browserHistory";
+
+// Re-export profile types
+export type {
+  UpdateProfileRequest,
+  CheckUsernameRequest,
+  GetPublicProfileRequest,
+} from "./profile";
+
+// Re-export link types
+export type {
+  CreateLinkRequest,
+  GetLinkRequest,
+  UpdateLinkRequest,
+  DeleteLinkRequest,
+  ReorderLinksRequest,
+  TrackLinkClickRequest,
+} from "./link";

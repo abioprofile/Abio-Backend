@@ -1,25 +1,27 @@
 import { profileService } from "@/service/profile.service";
 import catchAsync from "@/utils/catchAsync";
 import { handleServiceResponse } from "@/utils/httpHandlers";
-import type { Response, NextFunction, RequestHandler, Request } from "express";
+import type { Response, NextFunction, RequestHandler } from "express";
 import { AuthenticatedRequest } from "@/types/express";
-import type { TUpdateProfile, TCheckUsername } from "@/schemas/profile.schema";
+import type {
+  UpdateProfileRequest,
+  CheckUsernameRequest,
+  GetPublicProfileRequest,
+} from "@/types";
 
 class ProfileController {
   public getMyProfile: RequestHandler = catchAsync(
     async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-      const userId = req.user.id;
-      const serviceResponse = await profileService.getByUserId(userId);
+      const serviceResponse = await profileService.getByUserId(req.user.id);
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public updateMyProfile: RequestHandler = catchAsync(
-    async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-      const userId = req.user.id;
+    async (req: UpdateProfileRequest, res: Response, _next: NextFunction) => {
       const serviceResponse = await profileService.update(
-        userId,
-        req.body as TUpdateProfile
+        req.user.id,
+        req.body
       );
       return handleServiceResponse(serviceResponse, res);
     }
@@ -27,7 +29,7 @@ class ProfileController {
 
   public getPublicProfile: RequestHandler = catchAsync(
     async (
-      req: Request<{ username: string }>,
+      req: GetPublicProfileRequest,
       res: Response,
       _next: NextFunction
     ) => {
@@ -39,10 +41,9 @@ class ProfileController {
   );
 
   public checkUsername: RequestHandler = catchAsync(
-    async (req: Request, res: Response, _next: NextFunction) => {
-      const { username } = req.query as TCheckUsername;
+    async (req: CheckUsernameRequest, res: Response, _next: NextFunction) => {
       const serviceResponse = await profileService.checkUsernameAvailability(
-        username
+        req.query.username
       );
       return handleServiceResponse(serviceResponse, res);
     }

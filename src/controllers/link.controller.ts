@@ -1,43 +1,47 @@
 import { linkService } from "@/service/link.service";
 import catchAsync from "@/utils/catchAsync";
 import { handleServiceResponse } from "@/utils/httpHandlers";
-import type { Request, Response, RequestHandler } from "express";
+import type { Response, RequestHandler } from "express";
+import { AuthenticatedRequest } from "@/types/express";
 import type {
-  TCreateLink,
-  TUpdateLink,
-  TReorderLinks,
-} from "@/schemas/link.schema";
+  CreateLinkRequest,
+  GetLinkRequest,
+  UpdateLinkRequest,
+  DeleteLinkRequest,
+  ReorderLinksRequest,
+  TrackLinkClickRequest,
+} from "@/types";
 
 class LinkController {
   public create: RequestHandler = catchAsync(
-    async (req: Request<{}, {}, TCreateLink>, res: Response) => {
-      const serviceResponse = await linkService.create(req.user!.id, req.body);
+    async (req: CreateLinkRequest, res: Response) => {
+      const serviceResponse = await linkService.create(req.user.id, req.body);
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public getAll: RequestHandler = catchAsync(
-    async (req: Request, res: Response) => {
-      const serviceResponse = await linkService.getAllByUserId(req.user!.id);
+    async (req: AuthenticatedRequest, res: Response) => {
+      const serviceResponse = await linkService.getAllByUserId(req.user.id);
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public getById: RequestHandler = catchAsync(
-    async (req: Request<{ id: string }>, res: Response) => {
+    async (req: GetLinkRequest, res: Response) => {
       const serviceResponse = await linkService.getById(
         req.params.id,
-        req.user!.id
+        req.user.id
       );
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public update: RequestHandler = catchAsync(
-    async (req: Request<{ id: string }, {}, TUpdateLink>, res: Response) => {
+    async (req: UpdateLinkRequest, res: Response) => {
       const serviceResponse = await linkService.update(
         req.params.id,
-        req.user!.id,
+        req.user.id,
         req.body
       );
       return handleServiceResponse(serviceResponse, res);
@@ -45,24 +49,24 @@ class LinkController {
   );
 
   public delete: RequestHandler = catchAsync(
-    async (req: Request<{ id: string }>, res: Response) => {
+    async (req: DeleteLinkRequest, res: Response) => {
       const serviceResponse = await linkService.delete(
         req.params.id,
-        req.user!.id
+        req.user.id
       );
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public reorder: RequestHandler = catchAsync(
-    async (req: Request<{}, {}, TReorderLinks>, res: Response) => {
-      const serviceResponse = await linkService.reorder(req.user!.id, req.body);
+    async (req: ReorderLinksRequest, res: Response) => {
+      const serviceResponse = await linkService.reorder(req.user.id, req.body);
       return handleServiceResponse(serviceResponse, res);
     }
   );
 
   public trackClick: RequestHandler = catchAsync(
-    async (req: Request<{ id: string }>, res: Response) => {
+    async (req: TrackLinkClickRequest, res: Response) => {
       const serviceResponse = await linkService.trackClick(req.params.id);
       return handleServiceResponse(serviceResponse, res);
     }
