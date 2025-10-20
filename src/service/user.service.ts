@@ -36,17 +36,27 @@ export class UserService {
     // Hash the password before storing
     const hashedPassword = await this.hashPassword(payload.password);
 
-    // Create user with profile in a transaction
-    const newUser = await prisma.user.create({
+    // Create user first
+    const user = await prisma.user.create({
       data: {
         email: payload.email,
         firstName: payload.firstName,
         lastName: payload.lastName,
         password: hashedPassword,
       },
-      include: {
-        profile: true,
+    });
+
+    // Create profile afterwards
+    await prisma.profile.create({
+      data: {
+        userId: user.id,
       },
+    });
+
+    // Fetch user with profile
+    const newUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { profile: true },
     });
 
     return ServiceResponse.success(
