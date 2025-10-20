@@ -16,7 +16,7 @@ export class LinkService {
   private detectPlatform(url: string): string | null {
     for (const [key, platform] of Object.entries(SOCIAL_PLATFORMS)) {
       if (platform.urlPattern.test(url)) {
-        return key.toLowerCase();
+        return key.toUpperCase();
       }
     }
     return null;
