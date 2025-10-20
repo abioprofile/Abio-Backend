@@ -31,6 +31,21 @@ export class LinkService {
       throw new AppError("Profile not found", StatusCodes.NOT_FOUND);
     }
 
+    // Check if user already has a link with this URL
+    const existingLink = await prisma.link.findFirst({
+      where: {
+        profileId: profile.id,
+        url: data.url,
+      },
+    });
+
+    if (existingLink) {
+      throw new AppError(
+        "You already have a link with this URL",
+        StatusCodes.CONFLICT
+      );
+    }
+
     // Get current max order
     const maxOrder = await prisma.link.findFirst({
       where: { profileId: profile.id },
@@ -105,6 +120,9 @@ export class LinkService {
         id: linkId,
         profile: { userId },
       },
+      include: {
+        profile: true,
+      },
     });
 
     if (!link) {
@@ -112,6 +130,24 @@ export class LinkService {
         "Link not found or you don't have permission",
         StatusCodes.NOT_FOUND
       );
+    }
+
+    // If URL is being updated, check for duplicates (excluding current link)
+    if (data.url && data.url !== link.url) {
+      const existingLink = await prisma.link.findFirst({
+        where: {
+          profileId: link.profileId,
+          url: data.url,
+          id: { not: linkId }, // Exclude the current link
+        },
+      });
+
+      if (existingLink) {
+        throw new AppError(
+          "You already have a link with this URL",
+          StatusCodes.CONFLICT
+        );
+      }
     }
 
     // Re-detect platform if URL is being updated, or use provided platform
