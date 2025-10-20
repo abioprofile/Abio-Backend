@@ -3,7 +3,7 @@ import catchAsync from "@/utils/catchAsync";
 import { handleServiceResponse } from "@/utils/httpHandlers";
 import type { Response, NextFunction, RequestHandler, Request } from "express";
 import { AuthenticatedRequest } from "@/types/express";
-import type { TUpdateProfile } from "@/schemas/profile.schema";
+import type { TUpdateProfile, TCheckUsername } from "@/schemas/profile.schema";
 
 class ProfileController {
   public getMyProfile: RequestHandler = catchAsync(
@@ -33,6 +33,16 @@ class ProfileController {
     ) => {
       const serviceResponse = await profileService.getPublicByUsername(
         req.params.username
+      );
+      return handleServiceResponse(serviceResponse, res);
+    }
+  );
+
+  public checkUsername: RequestHandler = catchAsync(
+    async (req: Request, res: Response, _next: NextFunction) => {
+      const { username } = req.query as TCheckUsername;
+      const serviceResponse = await profileService.checkUsernameAvailability(
+        username
       );
       return handleServiceResponse(serviceResponse, res);
     }

@@ -1,5 +1,18 @@
 import z from "zod";
 
+export const checkUsernameSchema = z.object({
+  query: z.object({
+    username: z
+      .string({ required_error: "Username is required" })
+      .min(3, "Username must be at least 3 characters")
+      .max(30, "Username must be 30 characters or less")
+      .regex(
+        /^[a-zA-Z0-9_-]+$/,
+        "Username can only contain letters, numbers, hyphens and underscores"
+      ),
+  }),
+});
+
 export const updateProfileSchema = z.object({
   body: z
     .object({
@@ -35,3 +48,4 @@ export const updateProfileSchema = z.object({
 });
 
 export type TUpdateProfile = z.infer<typeof updateProfileSchema.shape.body>;
+export type TCheckUsername = z.infer<typeof checkUsernameSchema.shape.query>;

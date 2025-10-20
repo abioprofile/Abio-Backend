@@ -76,6 +76,24 @@ export class ProfileService {
 
     return ServiceResponse.success("Profile retrieved successfully", profile);
   }
+
+  async checkUsernameAvailability(username: string) {
+    const existingProfile = await prisma.profile.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    const isAvailable = !existingProfile;
+
+    return ServiceResponse.success(
+      isAvailable ? "Username is available" : "Username is already taken",
+      {
+        username,
+        isAvailable,
+        isValid: true, // Already validated by schema
+      }
+    );
+  }
 }
 
 export const profileService = new ProfileService();
