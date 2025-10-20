@@ -39,6 +39,7 @@ class AuthController {
           email: true,
           active: true,
           password: true, // Need this for comparison
+          isEmailVerified: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -48,8 +49,17 @@ class AuthController {
         !user ||
         !(await userService.comparePassword(password as string, user.password))
       ) {
-        
         return next(new AppError("Incorrect email or password", 401));
+      }
+
+      // Check if email is verified
+      if (!user.isEmailVerified) {
+        return next(
+          new AppError(
+            "Please verify your email address before logging in. Check your inbox for the verification code.",
+            403
+          )
+        );
       }
 
       // Remove password from user object before sending response
