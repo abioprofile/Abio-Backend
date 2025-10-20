@@ -38,4 +38,7 @@ userRouter.patch(
   ProfileController.updateMyProfile
 );
 
+// Public profile route (must be last - matches any username)
+userRouter.get("/:username", ProfileController.getPublicProfile);
+
 export default userRouter;
