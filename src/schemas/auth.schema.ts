@@ -1,6 +1,5 @@
 import z from "zod";
 import { PASSWORD_COMPLEXITY_REGEX } from "@/utils/constants";
-import { token } from "morgan";
 
 export const loginSchema = z.object({
   body: z.object({
@@ -28,9 +27,12 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   body: z
     .object({
-      token: z.string({
-        required_error: "Token is required",
-      }).min(6, "Token must be 6 characters").max(6, "Token must be 6 characters"),
+      token: z
+        .string({
+          required_error: "Token is required",
+        })
+        .min(6, "Token must be 6 characters")
+        .max(6, "Token must be 6 characters"),
       password: z
         .string({
           required_error: "Password is required",
@@ -75,9 +77,32 @@ export const updatePasswordSchema = z.object({
     }),
 });
 
+export const verifyEmailSchema = z.object({
+  body: z.object({
+    token: z
+      .string({
+        required_error: "Verification token is required",
+      })
+      .min(6, "Token must be 6 characters")
+      .max(6, "Token must be 6 characters"),
+  }),
+});
 
+export const resendVerificationEmailSchema = z.object({
+  body: z.object({
+    email: z
+      .string({
+        required_error: "Email is required",
+      })
+      .email("Invalid email address"),
+  }),
+});
 
 export type TLogin = z.infer<typeof loginSchema.shape.body>;
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema.shape.body>;
 export type TResetPassword = z.infer<typeof resetPasswordSchema.shape.body>;
 export type TUpdatePassword = z.infer<typeof updatePasswordSchema.shape.body>;
+export type TVerifyEmail = z.infer<typeof verifyEmailSchema.shape.body>;
+export type TResendVerificationEmail = z.infer<
+  typeof resendVerificationEmailSchema.shape.body
+>;

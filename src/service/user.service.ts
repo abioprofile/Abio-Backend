@@ -2,6 +2,7 @@ import { ServiceResponse } from "@/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { TLogin, TCreateUser, TUpdateUser } from "@/schemas/index";
 import env from "@/env";
 import { prisma } from "@/server";
@@ -9,6 +10,7 @@ import { UserWithProfile, LoginResult } from "@/types";
 import { User } from "@prisma/client";
 import { AppError } from "@/utils/appError";
 import { customAlphabet } from "nanoid";
+import Email from "@/utils/email";
 
 const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;
@@ -36,6 +38,13 @@ export class UserService {
     // Hash the password before storing
     const hashedPassword = await this.hashPassword(payload.password);
 
+    // Generate OTP for email verification
+    const verificationOTP = await this.generateOTP();
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(verificationOTP)
+      .digest("hex");
+
     // Create user first
     const user = await prisma.user.create({
       data: {
@@ -43,6 +52,8 @@ export class UserService {
         firstName: payload.firstName,
         lastName: payload.lastName,
         password: hashedPassword,
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
       },
     });
 
@@ -59,8 +70,16 @@ export class UserService {
       include: { profile: true },
     });
 
+    // Send verification email
+    try {
+      await new Email(newUser!, verificationOTP).sendEmailVerification();
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      // Don't fail user creation if email fails
+    }
+
     return ServiceResponse.success(
-      "User created successfully",
+      "User created successfully. Please check your email to verify your account.",
       newUser,
       StatusCodes.CREATED
     );
@@ -167,6 +186,99 @@ export class UserService {
     const alphabet = "0123456789";
     const nanoid = customAlphabet(alphabet, 6);
     return nanoid();
+  }
+
+  async verifyEmail(
+    token: string
+  ): Promise<ServiceResponse<UserWithProfile | null>> {
+    // Hash the provided token
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user with this token that hasn't expired
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: {
+          gt: new Date(),
+        },
+      },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      throw new AppError(
+        "Token is invalid or has expired",
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
+    // Update user as verified
+    const verifiedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+      include: { profile: true },
+    });
+
+    return ServiceResponse.success(
+      "Email verified successfully",
+      verifiedUser,
+      StatusCodes.OK
+    );
+  }
+
+  async resendVerificationEmail(email: string): Promise<ServiceResponse<null>> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      throw new AppError(
+        "No user found with this email",
+        StatusCodes.NOT_FOUND
+      );
+    }
+
+    if (user.isEmailVerified) {
+      throw new AppError("Email is already verified", StatusCodes.BAD_REQUEST);
+    }
+
+    // Generate new OTP
+    const verificationOTP = await this.generateOTP();
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(verificationOTP)
+      .digest("hex");
+
+    // Update user with new token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: hashedToken,
+        emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    // Send verification email
+    try {
+      await new Email(user, verificationOTP).sendEmailVerification();
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      throw new AppError(
+        "Failed to send verification email. Please try again later.",
+        StatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    return ServiceResponse.success(
+      "Verification email sent successfully",
+      null,
+      StatusCodes.OK
+    );
   }
 }
 

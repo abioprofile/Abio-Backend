@@ -79,6 +79,26 @@ export default class Email {
     await this.send(subject, html);
   }
 
+  async sendEmailVerification() {
+    const subject = "Verify Your Email Address";
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Welcome to ${ORGANIZATION_NAME}!</h2>
+        <p>Hi ${this.firstName},</p>
+        <p>Thank you for signing up! To complete your registration and verify your email address, please use the verification code below (valid for 10 minutes):</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="background-color: #f5f5f5; color: #333; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 8px; border: 2px dashed #4CAF50;">
+            ${this.code}
+          </div>
+        </div>
+        <p>If you didn't create an account with us, please ignore this email.</p>
+        <p>Best regards,<br>${ORGANIZATION_NAME}</p>
+      </div>
+    `;
+
+    await this.send(subject, html);
+  }
+
   async sendPartnerInvitation(
     partnerEmail: string,
     partnerName: string,

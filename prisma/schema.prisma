@@ -20,21 +20,23 @@ model Waitlist {
 
 
 model User {
-  id                    String    @id @default(uuid())
-  firstName            String
-  lastName             String
-  email                String    @unique
-  active               Boolean   @default(true)
-  password             String
-  isEmailVerified    Boolean @default(false)
-  passwordChangedAt    DateTime? @db.Timestamptz(6)
-  passwordResetToken   String?
-  passwordResetExpires DateTime? @db.Timestamptz(6)
-  createdAt            DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt            DateTime  @db.Timestamptz(6) @updatedAt
+  id                          String    @id @default(uuid())
+  firstName                   String
+  lastName                    String
+  email                       String    @unique
+  active                      Boolean   @default(true)
+  password                    String
+  isEmailVerified             Boolean   @default(false)
+  emailVerificationToken      String?
+  emailVerificationExpires    DateTime? @db.Timestamptz(6)
+  passwordChangedAt           DateTime? @db.Timestamptz(6)
+  passwordResetToken          String?
+  passwordResetExpires        DateTime? @db.Timestamptz(6)
+  createdAt                   DateTime  @db.Timestamptz(6) @default(now())
+  updatedAt                   DateTime  @db.Timestamptz(6) @updatedAt
 
   // Relations
-  profile              Profile?
+  profile                     Profile?
 
   @@map("users")
 }

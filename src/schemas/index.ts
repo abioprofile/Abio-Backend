@@ -21,12 +21,16 @@ export {
   forgotPasswordSchema,
   resetPasswordSchema,
   updatePasswordSchema,
+  verifyEmailSchema,
+  resendVerificationEmailSchema,
 } from "./auth.schema";
 export type {
   TLogin,
   TForgotPassword,
   TResetPassword,
   TUpdatePassword,
+  TVerifyEmail,
+  TResendVerificationEmail,
 } from "./auth.schema";
 
 export { createUserSchema, updateUserSchema } from "./user.schema";

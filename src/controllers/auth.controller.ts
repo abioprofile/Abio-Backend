@@ -5,6 +5,8 @@ import type {
   TLogin,
   TResetPassword,
   TUpdatePassword,
+  TVerifyEmail,
+  TResendVerificationEmail,
 } from "@/schemas/index";
 import { userService } from "@/service/user.service";
 import AppError from "@/utils/appError";
@@ -256,6 +258,30 @@ class AuthController {
         data: null,
         statusCode: StatusCodes.OK,
       });
+    }
+  );
+
+  public verifyEmail: RequestHandler = catchAsync(
+    async (
+      req: Request<{}, {}, TVerifyEmail>,
+      res: Response,
+      next: NextFunction
+    ) => {
+      const serviceResponse = await userService.verifyEmail(req.body.token);
+      return handleServiceResponse(serviceResponse, res);
+    }
+  );
+
+  public resendVerificationEmail: RequestHandler = catchAsync(
+    async (
+      req: Request<{}, {}, TResendVerificationEmail>,
+      res: Response,
+      next: NextFunction
+    ) => {
+      const serviceResponse = await userService.resendVerificationEmail(
+        req.body.email
+      );
+      return handleServiceResponse(serviceResponse, res);
     }
   );
 }
