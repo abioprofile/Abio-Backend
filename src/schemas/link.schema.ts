@@ -22,10 +22,16 @@ export const createLinkSchema = z.object({
         .max(100, "Title must be 100 characters or less"),
       url: z
         .string({ required_error: "URL is required" })
-        .regex(urlRegex, "Invalid URL format - must start with http:// or https://"),
+        .regex(
+          urlRegex,
+          "Invalid URL format - must start with http:// or https://"
+        ),
       platform: z
         .string()
-        .min(1, "Platform name is required when URL is not a recognized social platform")
+        .min(
+          1,
+          "Platform name is required when URL is not a recognized social platform"
+        )
         .max(50, "Platform name must be 50 characters or less")
         .optional(),
       isVisible: z.boolean().default(true).optional(),
