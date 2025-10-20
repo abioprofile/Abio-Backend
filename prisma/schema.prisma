@@ -50,7 +50,6 @@ model Profile {
   location                  String?
   goals                     String[]  @default([])
   avatarUrl                 String?
-  theme                     String?   @default("default")
   isPublic                  Boolean   @default(true)
   createdAt                 DateTime  @db.Timestamptz(6) @default(now())
   updatedAt                 DateTime  @db.Timestamptz(6) @updatedAt

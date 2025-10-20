@@ -29,7 +29,6 @@ export const updateProfileSchema = z.object({
         .max(10, "Maximum 10 goals allowed")
         .optional(),
       avatarUrl: z.string().url("Invalid avatar URL").optional(),
-      theme: z.enum(["default", "light", "dark"]).optional(),
       isPublic: z.boolean().optional(),
     })
     .partial(),
