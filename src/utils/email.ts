@@ -12,7 +12,8 @@ export default class Email {
 
   constructor(user: UserWithProfile, code: string) {
     this.to = user.email;
-    this.firstName = user.firstName;
+    // Extract first name from the full name (use full name if no space found)
+    this.firstName = user.name.split(' ')[0] || user.name;
     this.code = code;
     this.from = `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`;
   }

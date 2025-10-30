@@ -21,8 +21,7 @@ export type UserWithProfile = Prisma.UserGetPayload<{
 export interface LoginResult {
   user: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
     active: boolean;
     createdAt: Date;

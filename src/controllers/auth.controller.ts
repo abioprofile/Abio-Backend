@@ -34,8 +34,7 @@ class AuthController {
         where: { email },
         select: {
           id: true,
-          firstName: true,
-          lastName: true,
+          name: true,
           email: true,
           active: true,
           password: true, // Need this for comparison

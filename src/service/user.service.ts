@@ -46,8 +46,7 @@ export class UserService {
     const user = await prisma.user.create({
       data: {
         email: payload.email,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
+        name: payload.name,
         password: payload.password,
         emailVerificationToken: hashedToken,
         emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes

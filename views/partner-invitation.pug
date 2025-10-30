@@ -15,7 +15,7 @@ block content
         if partner
           p.lead
             | You've been invited by 
-            strong= partner.user.firstName + ' ' + partner.user.lastName
+            strong= partner.user.name
             |  (#{partner.user.email}) to be their accountability partner on UpHold.
           
           p.muted.mt-24
@@ -61,13 +61,13 @@ block content
               placeholder="Enter your email address"
             )
 
-          button.btn(type="submit") Accept Invitation & Support #{partner.user.firstName}
+          button.btn(type="submit") Accept Invitation & Support #{partner.user.name.split(' ')[0]}
           
           .mt-24
             a.btn.btn-secondary(href="#" onclick="history.back()") Decline Invitation
     else
       .center
         h1.title Welcome to the Team!
-        p.lead You've successfully accepted the invitation to support #{partner.user.firstName}'s digital wellness journey.
+        p.lead You've successfully accepted the invitation to support #{partner.user.name.split(' ')[0]}'s digital wellness journey.
         p.muted You'll receive updates according to the permissions they've set.
         

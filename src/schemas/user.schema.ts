@@ -5,8 +5,7 @@ import { zPhone } from "@/utils/zod/phone";
 export const createUserSchema = z.object({
   body: z
     .object({
-      firstName: z.string({ required_error: "First Name is required" }),
-      lastName: z.string({ required_error: "Last Name is required" }),
+      name: z.string({ required_error: "Name is required" }),
       email: z
         .string({ required_error: "Email is required" })
         .email("Invalid email address"),
@@ -30,8 +29,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   body: z
     .object({
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
+      name: z.string().optional(),
       email: z.string().email().optional(),
       phoneNumber: zPhone.optional(),
     })
