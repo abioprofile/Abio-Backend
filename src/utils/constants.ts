@@ -1,4 +1,4 @@
-export const ORGANIZATION_NAME = "A.Bio Site";
+export const ORGANIZATION_NAME = "Abio.site";
 
 export const PASSWORD_COMPLEXITY_REGEX =
   /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).+$/;
