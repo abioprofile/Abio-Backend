@@ -42,6 +42,13 @@ export const getUserSchema = z.object({
   }),
 });
 
+export const deleteAccountSchema = z.object({
+  body: z.object({
+    password: z.string({ required_error: "Password is required to delete your account" }),
+  }),
+});
+
 export type TCreateUser = z.infer<typeof createUserSchema.shape.body>;
 export type TUpdateUser = z.infer<typeof updateUserSchema.shape.body>;
 export type TGetUser = z.infer<typeof getUserSchema.shape.params>;
+export type TDeleteAccount = z.infer<typeof deleteAccountSchema.shape.body>;

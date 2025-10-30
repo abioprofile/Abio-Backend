@@ -5,7 +5,7 @@ import {
   updateProfileSchema,
   checkUsernameSchema,
 } from "@/schemas/index";
-import { createUserSchema, updateUserSchema } from "@/schemas/user.schema";
+import { createUserSchema, updateUserSchema, deleteAccountSchema } from "@/schemas/user.schema";
 import ProfileController from "../controllers/profile.controller";
 import { validateRequest } from "@/utils/httpHandlers";
 import express, { type Router } from "express";
@@ -28,6 +28,14 @@ userRouter.get(
 
 // Protected routes - require authentication
 userRouter.get("/", authenticate, UserController.getLoggedInUser);
+
+// Delete account route
+userRouter.delete(
+  "/",
+  authenticate,
+  validateRequest(deleteAccountSchema),
+  UserController.deleteMyAccount
+);
 
 // Profile routes
 userRouter.get("/profile", authenticate, ProfileController.getMyProfile);
