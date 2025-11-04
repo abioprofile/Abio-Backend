@@ -2,6 +2,7 @@ import { prisma } from "@/server";
 import { TCreateWaitlist } from "@/schemas/waitlist.schema";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
+import Email from "@/utils/email";
 
 export class WaitlistService {
   async create(data: TCreateWaitlist) {
@@ -23,6 +24,14 @@ export class WaitlistService {
         email: data.email,
       },
     });
+
+    // Send confirmation email
+    try {
+      await Email.sendWaitlistConfirmation(data.email, data.name);
+    } catch (error) {
+      console.error("Failed to send waitlist confirmation email:", error);
+      // Don't fail waitlist creation if email fails
+    }
 
     return ServiceResponse.success(
       "Successfully joined waitlist",
