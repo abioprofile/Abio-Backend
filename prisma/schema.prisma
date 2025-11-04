@@ -10,7 +10,7 @@ datasource db {
 
 model Waitlist {
   id                   String    @id @default(uuid())
-  name                 String 
+  name                 String  @default("Anonymous")
   email                String    @unique
   createdAt            DateTime  @db.Timestamptz(6) @default(now())
   updatedAt            DateTime  @db.Timestamptz(6) @updatedAt
