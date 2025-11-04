@@ -202,7 +202,7 @@ export default class Email {
 
       .brand .brand-name {
         font-weight: 700;
-        font-size: 18px;
+        font-size: 16px;
         color: #ffffff;
         line-height: 1;
       }
@@ -256,6 +256,23 @@ export default class Email {
         h1 {
           font-size: 1.4em;
         }
+
+        .bottom-row {
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 16px;
+        }
+
+        .copyright {
+          text-align: center;
+          width: 100%;
+        }
+
+        .social-icons {
+          justify-content: center;
+          width: 100%;
+        }
       }
     </style>
   </head>
@@ -268,14 +285,14 @@ export default class Email {
           fetchpriority="high"
           loading="eager"
         />
-        <span class="logo-text">bio.site</span>
+        <span class="logo-text">bio</span>
       </div>
       <h1>You've successfully joined the Waitlist!</h1>
 
-      <p>Hurray! 🎉</p>
+      <p>Welcome ${name}! 🎉</p>
       <p>
         Get ready for abio.site Web Beta.<br />
-        You're on the waitlist to use the abio.site Web Beta. We can't wait for
+        You’re on the waitlist to use the abio.site Web Beta. We can’t wait for
         you to experience the future of seamless contact sharing where sharing
         your details is as simple as sharing one single link.
       </p>
@@ -287,7 +304,7 @@ export default class Email {
         effortless connections.
       </p>
       <p>
-        You'll receive an email once we launch! In the meantime, be sure to
+        You’ll receive an email once we launch! In the meantime, be sure to
         check out our socials and stay tuned for updates.
       </p>
 
@@ -302,19 +319,19 @@ export default class Email {
                   color: inherit;
                   display: flex;
                   align-items: center;
-                  gap: 8px;
+                  gap: 2px;
                 "
               >
                 <img
                   src="https://abio.site/_next/image?url=%2Ficons%2FA.Bio.png&w=64&q=75"
                   alt="A.Bio Logo"
-                  width="28"
-                  height="28"
+                  width="20"
+                  height="20"
                   loading="eager"
                   fetchpriority="high"
                   style="vertical-align: middle; border: 0"
                 />
-                <span class="brand-name" style="color: #fff">bio.site</span>
+                <span class="brand-name" style="color: #fff">bio</span>
               </a>
             </div>
             <div class="legal-link">
@@ -410,7 +427,8 @@ export default class Email {
       </footer>
     </div>
   </body>
-</html>`;
+</html>
+`;
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
