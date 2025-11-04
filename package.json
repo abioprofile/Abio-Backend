@@ -1,7 +1,7 @@
 {
-  "name": "uphold",
+  "name": "abio.site",
   "version": "0.0.1",
-  "description": "Uphold backend",
+  "description": "Abio.site backend",
   "author": "Agnosys",
   "repository": "rhedwan/uphold",
   "license": "MIT",

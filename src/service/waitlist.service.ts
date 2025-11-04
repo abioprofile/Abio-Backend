@@ -19,6 +19,7 @@ export class WaitlistService {
 
     const waitlistEntry = await prisma.waitlist.create({
       data: {
+        name: data.name,
         email: data.email,
       },
     });
