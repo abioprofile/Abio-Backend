@@ -3,6 +3,7 @@ import { TUpdateProfile } from "@/schemas/profile.schema";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "@/utils/appError";
+import { uploadToCloudinary } from "@/utils/cloudinary";
 
 export class ProfileService {
   async getByUserId(userId: string) {
@@ -98,6 +99,22 @@ export class ProfileService {
         isValid: true, // Already validated by schema
       }
     );
+  }
+
+  async updateAvatar(userId: string, fileBuffer: Buffer) {
+    const { url } = await uploadToCloudinary(fileBuffer, "avatars");
+
+    const profile = await prisma.profile.update({
+      where: { userId },
+      data: { avatarUrl: url },
+      include: {
+        links: {
+          orderBy: { displayOrder: "asc" },
+        },
+      },
+    });
+
+    return ServiceResponse.success("Avatar updated successfully", profile);
   }
 }
 

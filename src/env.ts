@@ -9,6 +9,10 @@ const envSchema = z.object({
   BACKEND_URL: z.string().url(),
   NODE_ENV: z.enum(["development", "production"]).default("development"),
   DATABASE_URL: z.string().url(),
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: z.string(),
+  CLOUDINARY_API_KEY: z.string(),
+  CLOUDINARY_API_SECRET: z.string(),
   CORS_ORIGINS: z
     .string()
     .transform((val) => val.split(",").map((url) => url.trim()))

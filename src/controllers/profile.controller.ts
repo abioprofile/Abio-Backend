@@ -8,6 +8,7 @@ import type {
   CheckUsernameRequest,
   GetPublicProfileRequest,
 } from "@/types";
+import AppError from "@/utils/appError";
 
 class ProfileController {
   public getMyProfile: RequestHandler = catchAsync(
@@ -44,6 +45,20 @@ class ProfileController {
     async (req: CheckUsernameRequest, res: Response, _next: NextFunction) => {
       const serviceResponse = await profileService.checkUsernameAvailability(
         req.query.username
+      );
+      return handleServiceResponse(serviceResponse, res);
+    }
+  );
+
+  public updateAvatar: RequestHandler = catchAsync(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      if (!req.file) {
+        return next(new AppError("Please upload an image", 400));
+      }
+
+      const serviceResponse = await profileService.updateAvatar(
+        req.user.id,
+        req.file.buffer
       );
       return handleServiceResponse(serviceResponse, res);
     }

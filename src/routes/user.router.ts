@@ -8,6 +8,7 @@ import {
 import { createUserSchema, updateUserSchema, deleteAccountSchema } from "@/schemas/user.schema";
 import ProfileController from "../controllers/profile.controller";
 import { validateRequest } from "@/utils/httpHandlers";
+import { uploadImage } from "@/middleware/upload.middleware";
 import express, { type Router } from "express";
 
 export const userRouter: Router = express.Router();
@@ -44,6 +45,12 @@ userRouter.patch(
   authenticate,
   validateRequest(updateProfileSchema),
   ProfileController.updateMyProfile
+);
+userRouter.patch(
+  "/profile/avatar",
+  authenticate,
+  uploadImage.single("avatar"),
+  ProfileController.updateAvatar
 );
 
 // Public profile route (must be last - matches any username)
