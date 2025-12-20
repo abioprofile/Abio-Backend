@@ -41,6 +41,7 @@ class AuthController {
           isEmailVerified: true,
           createdAt: true,
           updatedAt: true,
+          profile: true,
         },
       });
 
