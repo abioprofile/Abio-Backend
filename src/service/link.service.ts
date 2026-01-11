@@ -8,6 +8,7 @@ import type {
   TUpdateLink,
   TReorderLinks,
 } from "@/schemas/link.schema";
+import { uploadToCloudinary } from "@/utils/cloudinary";
 
 export class LinkService {
   /**
@@ -245,6 +246,24 @@ export class LinkService {
     });
 
     return ServiceResponse.success("Click tracked", null);
+  }
+
+  async updateLinkIcon(linkId: string, file: Buffer<ArrayBufferLike>) {
+    try {
+      const link = await uploadToCloudinary(file, "icon_urls");
+  
+      const data = await prisma.link.update({
+        where: { id: linkId },
+        data: {
+          icon_link: link.url,
+        },
+      });
+  
+      return ServiceResponse.success("", data);
+    } catch (error: any) {
+      console.error(error);
+      return ServiceResponse.failure(error.message, null, 500);
+    }
   }
 }
 

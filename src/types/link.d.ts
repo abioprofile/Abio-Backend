@@ -33,3 +33,9 @@ export interface TrackLinkClickRequest {
     id: string;
   };
 }
+
+export interface UpdateLinkIconRequest extends AuthenticatedRequest {
+  params: {
+    id: string,
+  }
+}

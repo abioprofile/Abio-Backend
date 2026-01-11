@@ -8,6 +8,7 @@ import {
 import { UUIDSchema } from "@/schemas/index";
 import { validateRequest } from "@/utils/httpHandlers";
 import express, { type Router } from "express";
+import { uploadImage } from "@/middleware/upload.middleware";
 
 export const linkRouter: Router = express.Router();
 
@@ -23,6 +24,12 @@ linkRouter.patch(
   validateRequest(UUIDSchema),
   validateRequest(updateLinkSchema),
   LinkController.update
+);
+linkRouter.patch(
+  "/:id/icon",
+  validateRequest(UUIDSchema),
+  uploadImage.single("icon"),
+  LinkController.updateLinkIcon
 );
 linkRouter.delete("/:id", validateRequest(UUIDSchema), LinkController.delete);
 

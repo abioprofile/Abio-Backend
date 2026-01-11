@@ -1,7 +1,7 @@
 import { linkService } from "@/service/link.service";
 import catchAsync from "@/utils/catchAsync";
 import { handleServiceResponse } from "@/utils/httpHandlers";
-import type { Response, RequestHandler } from "express";
+import type { Response, RequestHandler, NextFunction } from "express";
 import { AuthenticatedRequest } from "@/types/express";
 import type {
   CreateLinkRequest,
@@ -11,6 +11,8 @@ import type {
   ReorderLinksRequest,
   TrackLinkClickRequest,
 } from "@/types";
+import AppError from "@/utils/appError";
+import { UpdateLinkIconRequest } from "@/types/link";
 
 class LinkController {
   public create: RequestHandler = catchAsync(
@@ -68,6 +70,16 @@ class LinkController {
   public trackClick: RequestHandler = catchAsync(
     async (req: TrackLinkClickRequest, res: Response) => {
       const serviceResponse = await linkService.trackClick(req.params.id);
+      return handleServiceResponse(serviceResponse, res);
+    }
+  );
+
+  public updateLinkIcon: RequestHandler = catchAsync(
+    async (req: UpdateLinkIconRequest, res: Response, next: NextFunction) => {
+      if (!req.file) {
+        return next(new AppError("Please provide an image for the icon", 400));
+      }
+      const serviceResponse = await linkService.updateLinkIcon(req.params.id, req.file.buffer);
       return handleServiceResponse(serviceResponse, res);
     }
   );

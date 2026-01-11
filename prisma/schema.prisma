@@ -7,78 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Waitlist {
-  id                   String    @id @default(uuid())
-  name                 String  @default("Anonymous")
-  email                String    @unique
-  createdAt            DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt            DateTime  @db.Timestamptz(6) @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  name      String   @default("Anonymous")
 
   @@map("waitlists")
 }
 
-
-
 model User {
-  id                          String    @id @default(uuid())
-  name                        String
-  email                       String    @unique
-  active                      Boolean   @default(true)
-  password                    String
-  isEmailVerified             Boolean   @default(false)
-  emailVerificationToken      String?
-  emailVerificationExpires    DateTime? @db.Timestamptz(6)
-  passwordChangedAt           DateTime? @db.Timestamptz(6)
-  passwordResetToken          String?
-  passwordResetExpires        DateTime? @db.Timestamptz(6)
-  createdAt                   DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt                   DateTime  @db.Timestamptz(6) @updatedAt
-
-  // Relations
-  profile                     Profile?
+  id                       String    @id @default(uuid())
+  email                    String    @unique
+  active                   Boolean   @default(true)
+  password                 String
+  passwordChangedAt        DateTime? @db.Timestamptz(6)
+  passwordResetToken       String?
+  passwordResetExpires     DateTime? @db.Timestamptz(6)
+  createdAt                DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @db.Timestamptz(6)
+  isEmailVerified          Boolean   @default(false)
+  emailVerificationExpires DateTime? @db.Timestamptz(6)
+  emailVerificationToken   String?
+  name                     String
+  profile                  Profile?
 
   @@map("users")
 }
 
 model Profile {
-  id                        String    @id @default(uuid())
-  userId                    String    @unique
-  username                  String?   @unique
-  displayName               String?
-  bio                       String?   @db.Text
-  location                  String?
-  goals                     String[]  @default([])
-  avatarUrl                 String?
-  isPublic                  Boolean   @default(true)
-  createdAt                 DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt                 DateTime  @db.Timestamptz(6) @updatedAt
-  
-  // Relations
-  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  links                     Link[]
-  
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  avatarUrl   String?
+  bio         String?
+  displayName String?
+  goals       String[] @default([])
+  isPublic    Boolean  @default(true)
+  location    String?
+  username    String?  @unique
+  links       Link[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("profiles")
 }
 
 model Link {
-  id                        String    @id @default(uuid())
-  profileId                 String
-  title                     String
-  url                       String
-  platform                  String?
-  displayOrder              Int       @default(0)
-  isVisible                 Boolean   @default(true)
-  clickCount                Int       @default(0)
-  createdAt                 DateTime  @db.Timestamptz(6) @default(now())
-  updatedAt                 DateTime  @db.Timestamptz(6) @updatedAt
-  
-  // Relations
-  profile                   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  @@map("links")
+  id           String   @id @default(uuid())
+  profileId    String
+  title        String
+  url          String
+  platform     String?
+  displayOrder Int      @default(0)
+  isVisible    Boolean  @default(true)
+  clickCount   Int      @default(0)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+  icon_link    String?
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@index([profileId])
   @@index([displayOrder])
+  @@map("links")
 }
-
-
