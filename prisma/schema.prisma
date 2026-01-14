@@ -32,6 +32,7 @@ model User {
   emailVerificationToken   String?
   name                     String
   profile                  Profile?
+  isOnboardingCompleted Boolean @default(false)
 
   @@map("users")
 }

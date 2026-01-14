@@ -11,6 +11,7 @@ import { User } from "@prisma/client";
 import { AppError } from "@/utils/appError";
 import { customAlphabet } from "nanoid";
 import Email from "@/utils/email";
+import { Response } from "express";
 
 const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;
@@ -102,7 +103,7 @@ export class UserService {
     body: TUpdateUser;
     id: string;
   }): Promise<ServiceResponse<UserWithProfile>> {
-    const updatedUser = await prisma.user.update({
+    let updatedUser = await prisma.user.update({
       where: { id: data.id },
       data: data.body,
       include: { profile: true },
@@ -184,9 +185,7 @@ export class UserService {
     return nanoid();
   }
 
-  async verifyEmail(
-    token: string
-  ): Promise<ServiceResponse<UserWithProfile | null>> {
+  async verifyEmail(token: string): Promise<ServiceResponse<LoginResult>> {
     // Hash the provided token
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
@@ -219,9 +218,14 @@ export class UserService {
       include: { profile: true },
     });
 
+    const bearerToken = signToken(verifiedUser.id);
+
     return ServiceResponse.success(
       "Email verified successfully",
-      verifiedUser,
+      {
+        user: verifiedUser,
+        token: bearerToken,
+      },
       StatusCodes.OK
     );
   }
@@ -276,6 +280,13 @@ export class UserService {
       StatusCodes.OK
     );
   }
+
+  // generateAccessToken(user: User, res: Response): string {
+  //   const { password: _, ...userWithoutPassword } = user;
+
+  //   const token = signToken(user.id);
+  //   return token;
+  // }
 }
 
 export const userService = new UserService();

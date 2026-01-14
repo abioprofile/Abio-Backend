@@ -48,6 +48,15 @@ export class ProfileService {
       },
     });
 
+    if (profile?.username && profile.goals.length > 0 && profile.displayName) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isOnboardingCompleted: true,
+        },
+      });
+    }
+
     return ServiceResponse.success("Profile updated successfully", profile);
   }
 
