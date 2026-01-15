@@ -48,7 +48,11 @@ export class ProfileService {
       },
     });
 
-    if (profile?.username && profile.goals.length > 0 && profile.displayName) {
+    if (
+      profile?.username &&
+      profile.goals.length > 0
+      // && profile.displayName
+    ) {
       await prisma.user.update({
         where: { id: userId },
         data: {
