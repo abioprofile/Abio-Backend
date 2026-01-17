@@ -8,7 +8,7 @@ export const checkUsernameSchema = z.object({
       .max(30, "Username must be 30 characters or less")
       .regex(
         /^[a-zA-Z0-9_-]+$/,
-        "Username can only contain letters, numbers, hyphens and underscores"
+        "Username can only contain letters, numbers, hyphens and underscores",
       ),
   }),
 });
@@ -22,7 +22,7 @@ export const updateProfileSchema = z.object({
         .max(30, "Username must be 30 characters or less")
         .regex(
           /^[a-zA-Z0-9_-]+$/,
-          "Username can only contain letters, numbers, hyphens and underscores"
+          "Username can only contain letters, numbers, hyphens and underscores",
         )
         .optional(),
       // displayName: z
@@ -37,7 +37,10 @@ export const updateProfileSchema = z.object({
         .optional(),
       goals: z
         .array(
-          z.string().min(1).max(200, "Each goal must be 200 characters or less")
+          z
+            .string()
+            .min(1)
+            .max(200, "Each goal must be 200 characters or less"),
         )
         .max(10, "Maximum 10 goals allowed")
         .optional(),
@@ -46,6 +49,21 @@ export const updateProfileSchema = z.object({
     })
     .partial(),
 });
+
+// User display preferences
+export const updateFontSchema = z.object({
+  body: z.object({
+    name: z
+      .string()
+      .regex(
+        /^[a-zA-Z0-9-]+$/,
+        "Font name can only contain letters, numbers, hyphens",
+      ),
+    fillColor: z.string(),
+  }),
+});
+export const updateCornersSchema = z.object({});
+export const updateBackgroundSchema = z.object({});
 
 export type TUpdateProfile = z.infer<typeof updateProfileSchema.shape.body>;
 export type TCheckUsername = z.infer<typeof checkUsernameSchema.shape.query>;
