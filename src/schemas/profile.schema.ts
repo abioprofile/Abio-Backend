@@ -25,11 +25,11 @@ export const updateProfileSchema = z.object({
           "Username can only contain letters, numbers, hyphens and underscores"
         )
         .optional(),
-      displayName: z
-        .string()
-        .min(1, "Display name is required")
-        .max(100, "Display name must be 100 characters or less")
-        .optional(),
+      // displayName: z
+      //   .string()
+      //   .min(1, "Display name is required")
+      //   .max(100, "Display name must be 100 characters or less")
+      //   .optional(),
       bio: z.string().max(500, "Bio must be 500 characters or less").optional(),
       location: z
         .string()

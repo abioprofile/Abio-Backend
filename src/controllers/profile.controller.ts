@@ -63,6 +63,10 @@ class ProfileController {
       return handleServiceResponse(serviceResponse, res);
     }
   );
+
+  public updateStylePreference = catchAsync(async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {});
+  public updateFontsPreference = catchAsync(async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {});
+  public updateCornerPreference = catchAsync(async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {});
 }
 
 export default new ProfileController();

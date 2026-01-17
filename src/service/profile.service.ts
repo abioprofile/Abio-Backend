@@ -13,6 +13,7 @@ export class ProfileService {
         links: {
           orderBy: { displayOrder: "asc" },
         },
+        display: true,
       },
     });
 
@@ -20,7 +21,7 @@ export class ProfileService {
       return ServiceResponse.failure(
         "Profile not found",
         null,
-        StatusCodes.NOT_FOUND
+        StatusCodes.NOT_FOUND,
       );
     }
     return ServiceResponse.success("Profile retrieved successfully", profile);
@@ -71,7 +72,7 @@ export class ProfileService {
         id: true,
         userId: true,
         username: true,
-        displayName: true,
+        // displayName: true,
         bio: true,
         location: true,
         avatarUrl: true,
@@ -83,13 +84,14 @@ export class ProfileService {
           where: { isVisible: true },
           orderBy: { displayOrder: "asc" },
         },
+        display: true,
       },
     });
 
     if (!profile) {
       throw new AppError(
         "Profile not found or is private",
-        StatusCodes.NOT_FOUND
+        StatusCodes.NOT_FOUND,
       );
     }
 
@@ -110,7 +112,7 @@ export class ProfileService {
         username,
         isAvailable,
         isValid: true, // Already validated by schema
-      }
+      },
     );
   }
 

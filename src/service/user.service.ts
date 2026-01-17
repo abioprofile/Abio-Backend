@@ -22,7 +22,7 @@ const signToken = (id: string): string => {
 
 export class UserService {
   async create(
-    payload: TCreateUser
+    payload: TCreateUser,
   ): Promise<ServiceResponse<UserWithProfile | null>> {
     // Check if user with this email already exists
     const existingUser = await prisma.user.findUnique({
@@ -32,7 +32,7 @@ export class UserService {
     if (existingUser) {
       throw new AppError(
         "A user with this email already exists.",
-        StatusCodes.CONFLICT
+        StatusCodes.CONFLICT,
       );
     }
 
@@ -78,21 +78,27 @@ export class UserService {
     return ServiceResponse.success(
       "User created successfully. Please check your email to verify your account.",
       newUser,
-      StatusCodes.CREATED
+      StatusCodes.CREATED,
     );
   }
 
   async findById(id: string): Promise<ServiceResponse<UserWithProfile | null>> {
     const user = await prisma.user.findUnique({
       where: { id },
-      include: { profile: true },
+      include: {
+        profile: {
+          include: {
+            display: true,
+          },
+        },
+      },
     });
 
     if (!user) {
       return ServiceResponse.failure(
         "User not found",
         null,
-        StatusCodes.NOT_FOUND
+        StatusCodes.NOT_FOUND,
       );
     }
 
@@ -125,7 +131,7 @@ export class UserService {
     return ServiceResponse.success(
       "User deleted successfully",
       null,
-      StatusCodes.OK
+      StatusCodes.OK,
     );
   }
 
@@ -140,7 +146,7 @@ export class UserService {
       return ServiceResponse.failure<LoginResult | null>(
         "Incorrect email or password",
         null,
-        StatusCodes.BAD_REQUEST
+        StatusCodes.BAD_REQUEST,
       );
     }
 
@@ -148,7 +154,7 @@ export class UserService {
       return ServiceResponse.failure<LoginResult | null>(
         "User account has no password set",
         null,
-        StatusCodes.BAD_REQUEST
+        StatusCodes.BAD_REQUEST,
       );
     }
 
@@ -156,7 +162,7 @@ export class UserService {
       return ServiceResponse.failure<LoginResult | null>(
         "Incorrect email or password",
         null,
-        StatusCodes.BAD_REQUEST
+        StatusCodes.BAD_REQUEST,
       );
     }
 
@@ -170,7 +176,7 @@ export class UserService {
 
   async comparePassword(
     candidatePassword: string,
-    userPassword: string
+    userPassword: string,
   ): Promise<boolean> {
     return bcrypt.compare(candidatePassword, userPassword);
   }
@@ -203,7 +209,7 @@ export class UserService {
     if (!user) {
       throw new AppError(
         "Token is invalid or has expired",
-        StatusCodes.BAD_REQUEST
+        StatusCodes.BAD_REQUEST,
       );
     }
 
@@ -226,7 +232,7 @@ export class UserService {
         user: verifiedUser,
         token: bearerToken,
       },
-      StatusCodes.OK
+      StatusCodes.OK,
     );
   }
 
@@ -239,7 +245,7 @@ export class UserService {
     if (!user) {
       throw new AppError(
         "No user found with this email",
-        StatusCodes.NOT_FOUND
+        StatusCodes.NOT_FOUND,
       );
     }
 
@@ -270,14 +276,14 @@ export class UserService {
       console.error("Failed to send verification email:", error);
       throw new AppError(
         "Failed to send verification email. Please try again later.",
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
 
     return ServiceResponse.success(
       "Verification email sent successfully",
       null,
-      StatusCodes.OK
+      StatusCodes.OK,
     );
   }
 

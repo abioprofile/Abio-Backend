@@ -5,7 +5,11 @@ import {
   updateProfileSchema,
   checkUsernameSchema,
 } from "@/schemas/index";
-import { createUserSchema, updateUserSchema, deleteAccountSchema } from "@/schemas/user.schema";
+import {
+  createUserSchema,
+  updateUserSchema,
+  deleteAccountSchema,
+} from "@/schemas/user.schema";
 import ProfileController from "../controllers/profile.controller";
 import { validateRequest } from "@/utils/httpHandlers";
 import { uploadImage } from "@/middleware/upload.middleware";
@@ -17,14 +21,14 @@ export const userRouter: Router = express.Router();
 userRouter.post(
   "/signup",
   validateRequest(createUserSchema),
-  UserController.createUser
+  UserController.createUser,
 );
 
 // Check username availability (public)
 userRouter.get(
   "/check-username",
   validateRequest(checkUsernameSchema),
-  ProfileController.checkUsername
+  ProfileController.checkUsername,
 );
 
 // Protected routes - require authentication
@@ -35,7 +39,7 @@ userRouter.delete(
   "/",
   authenticate,
   validateRequest(deleteAccountSchema),
-  UserController.deleteMyAccount
+  UserController.deleteMyAccount,
 );
 
 // Profile routes
@@ -44,13 +48,29 @@ userRouter.patch(
   "/profile",
   authenticate,
   validateRequest(updateProfileSchema),
-  ProfileController.updateMyProfile
+  ProfileController.updateMyProfile,
 );
 userRouter.patch(
   "/profile/avatar",
   authenticate,
   uploadImage.single("avatar"),
-  ProfileController.updateAvatar
+  ProfileController.updateAvatar,
+);
+
+userRouter.post(
+  "/preferences/background",
+  authenticate,
+  ProfileController.updateStylePreference,
+);
+userRouter.post(
+  "/preferences/fonts",
+  authenticate,
+  ProfileController.updateFontsPreference,
+);
+userRouter.post(
+  "/preferences/corners",
+  authenticate,
+  ProfileController.updateCornerPreference,
 );
 
 // Public profile route (must be last - matches any username)

@@ -18,39 +18,41 @@ model Waitlist {
 }
 
 model User {
-  id                       String    @id @default(uuid())
-  email                    String    @unique
-  active                   Boolean   @default(true)
+  id                       String              @id @default(uuid())
+  email                    String              @unique
+  active                   Boolean             @default(true)
   password                 String
-  passwordChangedAt        DateTime? @db.Timestamptz(6)
+  passwordChangedAt        DateTime?           @db.Timestamptz(6)
   passwordResetToken       String?
-  passwordResetExpires     DateTime? @db.Timestamptz(6)
-  createdAt                DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt                DateTime  @updatedAt @db.Timestamptz(6)
-  isEmailVerified          Boolean   @default(false)
-  emailVerificationExpires DateTime? @db.Timestamptz(6)
+  passwordResetExpires     DateTime?           @db.Timestamptz(6)
+  createdAt                DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime            @updatedAt @db.Timestamptz(6)
+  isEmailVerified          Boolean             @default(false)
+  emailVerificationExpires DateTime?           @db.Timestamptz(6)
   emailVerificationToken   String?
   name                     String
   profile                  Profile?
-  isOnboardingCompleted Boolean @default(false)
+  isOnboardingCompleted    Boolean             @default(false)
+  displayPreferences       DisplayPreference[]
 
   @@map("users")
 }
 
 model Profile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  id          String             @id @default(uuid())
+  userId      String             @unique
+  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
   avatarUrl   String?
   bio         String?
-  displayName String?
-  goals       String[] @default([])
-  isPublic    Boolean  @default(true)
+  // displayName String?
+  goals       String[]           @default([])
+  isPublic    Boolean            @default(true)
   location    String?
-  username    String?  @unique
+  username    String?            @unique
   links       Link[]
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  display     DisplayPreference?
 
   @@map("profiles")
 }
@@ -72,4 +74,20 @@ model Link {
   @@index([profileId])
   @@index([displayOrder])
   @@map("links")
+}
+
+model DisplayPreference {
+  id               String   @id @default(uuid())
+  userId           String
+  profileId        String   @unique
+  selected_theme   String?
+  font_config      Json?    @default("{}")
+  corner_config    Json?    @default("{}")
+  wallpaper_config Json?    @default("{}")
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("display_preferences")
 }
