@@ -62,8 +62,18 @@ export const updateFontSchema = z.object({
     fillColor: z.string(),
   }),
 });
-export const updateCornersSchema = z.object({});
-export const updateBackgroundSchema = z.object({});
+
+export const updateCornersSchema = z.object({
+  body: z.object({}),
+});
+
+export const updateBackgroundSchema = z.object({
+  body: z.object({}),
+});
 
 export type TUpdateProfile = z.infer<typeof updateProfileSchema.shape.body>;
 export type TCheckUsername = z.infer<typeof checkUsernameSchema.shape.query>;
+
+export type TUpdateCorners = z.infer<typeof updateCornersSchema.shape.body>;
+export type TUpdateFont = z.infer<typeof updateFontSchema.shape.body>;
+export type TUpdateBackground = z.infer<typeof updateBackgroundSchema.shape.body>;

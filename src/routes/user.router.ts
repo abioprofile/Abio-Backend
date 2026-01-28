@@ -14,6 +14,7 @@ import ProfileController from "../controllers/profile.controller";
 import { validateRequest } from "@/utils/httpHandlers";
 import { uploadImage } from "@/middleware/upload.middleware";
 import express, { type Router } from "express";
+import { updateBackgroundSchema, updateCornersSchema, updateFontSchema } from "@/schemas/profile.schema";
 
 export const userRouter: Router = express.Router();
 
@@ -60,16 +61,19 @@ userRouter.patch(
 userRouter.post(
   "/preferences/background",
   authenticate,
+  validateRequest(updateBackgroundSchema),
   ProfileController.updateStylePreference,
 );
 userRouter.post(
   "/preferences/fonts",
   authenticate,
+  validateRequest(updateFontSchema),
   ProfileController.updateFontsPreference,
 );
 userRouter.post(
   "/preferences/corners",
   authenticate,
+  validateRequest(updateCornersSchema),
   ProfileController.updateCornerPreference,
 );
 
