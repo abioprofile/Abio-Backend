@@ -88,6 +88,13 @@ class ProfileController {
       return handleServiceResponse(response, res);
     },
   );
+
+  public getDisplaySettings = catchAsync(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const response = await preferencesService.getPreferences(req.user.id);
+      return handleServiceResponse(response, res);
+    }
+  );
 }
 
 export default new ProfileController();

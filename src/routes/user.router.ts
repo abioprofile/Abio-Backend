@@ -58,19 +58,21 @@ userRouter.patch(
   ProfileController.updateAvatar,
 );
 
-userRouter.post(
+userRouter.get("/preferences", authenticate, ProfileController.getDisplaySettings);
+
+userRouter.put(
   "/preferences/background",
   authenticate,
   validateRequest(updateBackgroundSchema),
   ProfileController.updateStylePreference,
 );
-userRouter.post(
+userRouter.put(
   "/preferences/fonts",
   authenticate,
   validateRequest(updateFontSchema),
   ProfileController.updateFontsPreference,
 );
-userRouter.post(
+userRouter.put(
   "/preferences/corners",
   authenticate,
   validateRequest(updateCornersSchema),
