@@ -14,8 +14,33 @@ class PreferenceService {
   async updateBackgroundPreferences(
     userId: string,
     data: TUpdateBackground,
-  ): Promise<ServiceResponse> {
-    return ServiceResponse.failure("", null, StatusCodes.NOT_IMPLEMENTED);
+  ): Promise<ServiceResponse<DisplayPreference>> {
+    const profile = await profileService.getByUserId(userId);
+
+    // Preserve some of the previous settings that haven't been changed.
+    const prevSettings = await prisma.displayPreference.findUnique({
+      where: { profileId: profile.data!.id },
+    });
+
+    const update = {
+      ...((prevSettings?.wallpaper_config ?? {}) as object),
+      ...data,
+    };
+
+    const settings = await prisma.displayPreference.update({
+      where: {
+        profileId: profile.data!.id,
+      },
+      data: {
+        wallpaper_config: update,
+      },
+    });
+
+    return ServiceResponse.success(
+      "Wallpaper settings updated successfully",
+      settings,
+      StatusCodes.OK,
+    );
   }
 
   async updateFontPreferences(
@@ -24,12 +49,12 @@ class PreferenceService {
   ): Promise<ServiceResponse<DisplayPreference>> {
     const profile = await profileService.getByUserId(userId);
     const settings = await prisma.displayPreference.update({
-        where: {
-            profileId: profile.data!.id
-        },
-        data: {
-            font_config: data,
-        }
+      where: {
+        profileId: profile.data!.id,
+      },
+      data: {
+        font_config: data,
+      },
     });
 
     return ServiceResponse.success("Settings updated", settings);
@@ -38,37 +63,55 @@ class PreferenceService {
   async updateCornerPreferences(
     userId: string,
     data: TUpdateCorners,
-  ): Promise<ServiceResponse> {
-    return ServiceResponse.failure("", null, StatusCodes.NOT_IMPLEMENTED);
+  ): Promise<ServiceResponse<DisplayPreference>> {
+    const profile = await profileService.getByUserId(userId);
+    const settings = await prisma.displayPreference.update({
+      where: {
+        profileId: profile.data!.id,
+      },
+      data: {
+        corner_config: data,
+      },
+    });
+
+    return ServiceResponse.success(
+      "Corner settings updated successfully",
+      settings,
+      StatusCodes.OK,
+    );
   }
 
   async getPreferences(userId: string) {
     const settings = await prisma.displayPreference.findFirst({
-        where: {
-            userId,
-        }
+      where: {
+        userId,
+      },
     });
 
     if (!settings) {
-        const profile = await prisma.profile.findFirst({where: {userId,}});
+      const profile = await prisma.profile.findFirst({ where: { userId } });
 
-        if (profile) {
-            const pref = await prisma.displayPreference.create({
-                data: {
-                    corner_config: {},
-                    font_config: {},
-                    userId,
-                    profileId: profile.id,
-                    wallpaper_config: {},
-                    selected_theme: null,
-                }
-            });
+      if (profile) {
+        const pref = await prisma.displayPreference.create({
+          data: {
+            corner_config: {},
+            font_config: {},
+            userId,
+            profileId: profile.id,
+            wallpaper_config: {},
+            selected_theme: null,
+          },
+        });
 
-            return ServiceResponse.success("Settings generated", pref);
-        }
+        return ServiceResponse.success("Settings generated", pref);
+      }
     }
 
-    return ServiceResponse.success("Settings retrieved successfully", settings, 200);
+    return ServiceResponse.success(
+      "Settings retrieved successfully",
+      settings,
+      200,
+    );
   }
 }
 

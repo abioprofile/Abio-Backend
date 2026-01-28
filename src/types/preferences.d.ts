@@ -5,7 +5,7 @@ type GradientSpec = {
 
 export type WallpaperConfig = {
   type: "gradient" | "fill" | "image";
-  url?: String;
+  image?: {url: string, publicId: string};
   backgroundColor?: String | GradientSpec[];
 };
 

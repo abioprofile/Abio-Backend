@@ -63,6 +63,7 @@ userRouter.get("/preferences", authenticate, ProfileController.getDisplaySetting
 userRouter.put(
   "/preferences/background",
   authenticate,
+  uploadImage.single('image'),
   validateRequest(updateBackgroundSchema),
   ProfileController.updateStylePreference,
 );

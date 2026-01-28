@@ -60,15 +60,34 @@ export const updateFontSchema = z.object({
         "Font name can only contain letters, numbers, hyphens",
       ),
     fillColor: z.string(),
+    strokeColor: z.string().optional(),
   }),
 });
 
 export const updateCornersSchema = z.object({
-  body: z.object({}),
+  body: z.object({
+    type: z.string(),
+    fillColor: z.string(),
+    strokeColor: z.string(),
+    opacity: z.number().min(0).max(1),
+    shadowSize: z.string(),
+    shadowColor: z.string(),
+  }),
 });
 
 export const updateBackgroundSchema = z.object({
-  body: z.object({}),
+  body: z.object({
+    type: z.string(),
+    image: z.string().url().optional(),
+    backgroundColor: z.string().or(
+      z.array(
+        z.object({
+          color: z.string(),
+          amount: z.number().min(0).max(1),
+        }),
+      ),
+    ).optional(),
+  }),
 });
 
 export type TUpdateProfile = z.infer<typeof updateProfileSchema.shape.body>;
@@ -76,4 +95,6 @@ export type TCheckUsername = z.infer<typeof checkUsernameSchema.shape.query>;
 
 export type TUpdateCorners = z.infer<typeof updateCornersSchema.shape.body>;
 export type TUpdateFont = z.infer<typeof updateFontSchema.shape.body>;
-export type TUpdateBackground = z.infer<typeof updateBackgroundSchema.shape.body>;
+export type TUpdateBackground = z.infer<
+  typeof updateBackgroundSchema.shape.body
+>;

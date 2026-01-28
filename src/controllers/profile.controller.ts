@@ -10,6 +10,8 @@ import type {
 } from "@/types";
 import AppError from "@/utils/appError";
 import preferencesService from "@/service/preferences.service";
+import { uploadToCloudinary } from "@/utils/cloudinary";
+import { ServiceResponse } from "@/utils/serviceResponse";
 
 class ProfileController {
   public getMyProfile: RequestHandler = catchAsync(
@@ -67,7 +69,29 @@ class ProfileController {
 
   public updateStylePreference = catchAsync(
     async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-      const response = await preferencesService.updateBackgroundPreferences(req.user.id, req.body);
+      let image = null;
+
+      if (req.body.type == "image" && !req.file) {
+        return handleServiceResponse(
+          ServiceResponse.failure("type 'image' requires a file", null, 400),
+          res,
+        );
+      }
+
+      if (req.file) {
+        image = await uploadToCloudinary(req.file.buffer, "wallpapers");
+      }
+
+      const data = { ...req.body };
+      if (image) {
+        data.image = image;
+      }
+
+      const response = await preferencesService.updateBackgroundPreferences(
+        req.user.id,
+        data,
+      );
+
       return handleServiceResponse(response, res);
     },
   );
@@ -84,7 +108,10 @@ class ProfileController {
 
   public updateCornerPreference = catchAsync(
     async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-      const response = await preferencesService.updateCornerPreferences(req.user.id, req.body);
+      const response = await preferencesService.updateCornerPreferences(
+        req.user.id,
+        req.body,
+      );
       return handleServiceResponse(response, res);
     },
   );
@@ -93,7 +120,7 @@ class ProfileController {
     async (req: AuthenticatedRequest, res: Response) => {
       const response = await preferencesService.getPreferences(req.user.id);
       return handleServiceResponse(response, res);
-    }
+    },
   );
 }
 
