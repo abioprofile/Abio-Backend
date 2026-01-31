@@ -27,7 +27,10 @@ export class ProfileService {
     return ServiceResponse.success("Profile retrieved successfully", profile);
   }
 
-  async update(userId: string, data: TUpdateProfile) {
+  async update(
+    userId: string,
+    data: TUpdateProfile & { displayName?: string },
+  ) {
     // Check if username is being updated and if it's already taken
     if (data.username) {
       const existingProfile = await prisma.profile.findUnique({
@@ -39,15 +42,26 @@ export class ProfileService {
       }
     }
 
+    if (data.displayName) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { name: data.displayName },
+      });
+    }
+
     const profile = await prisma.profile.update({
       where: { userId },
-      data,
+      data: { ...data, displayName: undefined } as any,
       include: {
         links: {
           orderBy: { displayOrder: "asc" },
         },
+        user: {
+          select: {name: true},
+        }
       },
     });
+
 
     if (
       profile?.username &&
@@ -85,7 +99,7 @@ export class ProfileService {
           orderBy: { displayOrder: "asc" },
         },
         user: {
-          select: {name: true},
+          select: { name: true },
         },
         display: true,
       },

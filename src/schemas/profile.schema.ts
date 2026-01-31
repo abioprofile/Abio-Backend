@@ -25,11 +25,11 @@ export const updateProfileSchema = z.object({
           "Username can only contain letters, numbers, hyphens and underscores",
         )
         .optional(),
-      // displayName: z
-      //   .string()
-      //   .min(1, "Display name is required")
-      //   .max(100, "Display name must be 100 characters or less")
-      //   .optional(),
+      displayName: z
+        .string()
+        .min(1, "Display name is required")
+        .max(100, "Display name must be 100 characters or less")
+        .optional(),
       bio: z.string().max(500, "Bio must be 500 characters or less").optional(),
       location: z
         .string()
@@ -59,16 +59,19 @@ export const updateFontSchema = z.object({
         /^[a-zA-Z0-9-]+$/,
         "Font name can only contain letters, numbers, hyphens",
       ),
-    fillColor: z.string(),
-    strokeColor: z.string().optional(),
+    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
+    strokeColor: z
+      .string()
+      .regex(/^#[a-zA-Z0-9]{3,6}$/)
+      .optional(),
   }),
 });
 
 export const updateCornersSchema = z.object({
   body: z.object({
     type: z.string(),
-    fillColor: z.string(),
-    strokeColor: z.string(),
+    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
+    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
     opacity: z.number().min(0).max(1),
     shadowSize: z.string(),
     shadowColor: z.string(),
@@ -79,14 +82,18 @@ export const updateBackgroundSchema = z.object({
   body: z.object({
     type: z.string(),
     image: z.string().url().optional(),
-    backgroundColor: z.string().or(
-      z.array(
-        z.object({
-          color: z.string(),
-          amount: z.number().min(0).max(1),
-        }),
-      ),
-    ).optional(),
+    backgroundColor: z
+      .string()
+      .regex(/^#[a-zA-Z0-9]{3,6}$/)
+      .or(
+        z.array(
+          z.object({
+            color: z.string(),
+            amount: z.number().min(0).max(1),
+          }),
+        ),
+      )
+      .optional(),
   }),
 });
 
