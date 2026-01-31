@@ -27,13 +27,18 @@ class PreferenceService {
       ...data,
     };
 
-    const settings = await prisma.displayPreference.update({
+    const settings = await prisma.displayPreference.upsert({
       where: {
         profileId: profile.data!.id,
       },
-      data: {
+      update: {
         wallpaper_config: update,
       },
+      create: {
+        userId,
+        profileId: profile.data!.id,
+        wallpaper_config: update,
+      }
     });
 
     return ServiceResponse.success(
@@ -48,11 +53,16 @@ class PreferenceService {
     data: TUpdateFont,
   ): Promise<ServiceResponse<DisplayPreference>> {
     const profile = await profileService.getByUserId(userId);
-    const settings = await prisma.displayPreference.update({
+    const settings = await prisma.displayPreference.upsert({
       where: {
         profileId: profile.data!.id,
       },
-      data: {
+      create: {
+        profileId: profile.data!.id,
+        userId,
+        font_config: data,
+      },
+      update: {
         font_config: data,
       },
     });
@@ -65,11 +75,16 @@ class PreferenceService {
     data: TUpdateCorners,
   ): Promise<ServiceResponse<DisplayPreference>> {
     const profile = await profileService.getByUserId(userId);
-    const settings = await prisma.displayPreference.update({
+    const settings = await prisma.displayPreference.upsert({
       where: {
         profileId: profile.data!.id,
       },
-      data: {
+      update: {
+        corner_config: data,
+      },
+      create: {
+        profileId: profile.data!.id,
+        userId,
         corner_config: data,
       },
     });
