@@ -84,15 +84,11 @@ export class ProfileService {
           where: { isVisible: true },
           orderBy: { displayOrder: "asc" },
         },
+        user: {
+          select: {name: true},
+        },
         display: true,
       },
-      include: {
-        user: {
-          select: {
-            name: true,
-          }
-        }
-      }
     });
 
     if (!profile) {
