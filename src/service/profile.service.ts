@@ -86,6 +86,13 @@ export class ProfileService {
         },
         display: true,
       },
+      include: {
+        user: {
+          select: {
+            name: true,
+          }
+        }
+      }
     });
 
     if (!profile) {
