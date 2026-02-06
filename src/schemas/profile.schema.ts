@@ -70,11 +70,11 @@ export const updateFontSchema = z.object({
 export const updateCornersSchema = z.object({
   body: z.object({
     type: z.string(),
-    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
-    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
-    opacity: z.number().min(0).max(1),
+    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/).optional(),
+    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/).optional(),
+    opacity: z.number().min(0).max(1).optional(),
     shadowSize: z.string(),
-    shadowColor: z.string(),
+    shadowColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
   }),
 });
 
