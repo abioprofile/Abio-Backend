@@ -295,6 +295,14 @@ class AuthController {
       return handleServiceResponse(serviceResponse, res);
     }
   );
+
+  public loginWithGoogle: RequestHandler = catchAsync(
+    async (req: Request, res: Response) => {
+      const serviceResponse = await userService.oauthLogin(req.user);
+
+      return res.redirect(`${env.CLIENT_URL}/auth/callback?token=${serviceResponse.data.token}`);
+    }
+  );
 }
 
 export default new AuthController();

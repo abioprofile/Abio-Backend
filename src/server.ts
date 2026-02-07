@@ -17,6 +17,9 @@ import cookieParser from "cookie-parser";
 import env from "@/env";
 import { prisma } from "@/lib/prisma";
 
+import setupPassport from "@/service/passport";
+import passport from "passport";
+
 const logger = pino({ name: "server start" });
 const app: Express = express();
 
@@ -42,6 +45,9 @@ app.use(
   })
 );
 app.use(helmet());
+
+const pp = setupPassport(passport);
+app.use(pp.initialize());
 
 // Routes
 app.use("/api/v1/user", userRouter);

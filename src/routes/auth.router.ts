@@ -10,10 +10,27 @@ import {
 } from "@/schemas/index";
 import { validateRequest } from "@/utils/httpHandlers";
 import express, { type Router } from "express";
+import passport from "passport";
 
 export const authRouter: Router = express.Router();
 
 authRouter.post("/login", validateRequest(loginSchema), AuthController.login);
+
+authRouter.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  }),
+);
+authRouter.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "https://abio.site/login",
+  }),
+  AuthController.loginWithGoogle,
+);
 
 authRouter.post("/logout", AuthController.logout);
 
@@ -21,33 +38,33 @@ authRouter.post("/logout", AuthController.logout);
 authRouter.post(
   "/verify-email",
   validateRequest(verifyEmailSchema),
-  AuthController.verifyEmail
+  AuthController.verifyEmail,
 );
 
 authRouter.post(
   "/resend-verification-email",
   validateRequest(resendVerificationEmailSchema),
-  AuthController.resendVerificationEmail
+  AuthController.resendVerificationEmail,
 );
 
 // Password management routes
 authRouter.post(
   "/forgot-password",
   validateRequest(forgotPasswordSchema),
-  AuthController.forgotPassword
+  AuthController.forgotPassword,
 );
 
 authRouter.post(
   "/reset-password",
   validateRequest(resetPasswordSchema),
-  AuthController.resetPassword
+  AuthController.resetPassword,
 );
 
 authRouter.patch(
   "/update-password",
   authenticate,
   validateRequest(updatePasswordSchema),
-  AuthController.updatePassword
+  AuthController.updatePassword,
 );
 
 export default authRouter;

@@ -105,6 +105,10 @@ export class UserService {
     return ServiceResponse.success("User retrieved successfully", user);
   }
 
+  async findByEmail(email: string) {
+    return await prisma.user.findUnique({ where: { email } });
+  }
+
   async update(data: {
     body: TUpdateUser;
     id: string;
@@ -285,6 +289,11 @@ export class UserService {
       null,
       StatusCodes.OK,
     );
+  }
+
+  async oauthLogin(user: User) {
+    const token = signToken(user.id);
+    return ServiceResponse.success("Login successful", { token, user }, 200);
   }
 
   // generateAccessToken(user: User, res: Response): string {

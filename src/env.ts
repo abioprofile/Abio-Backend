@@ -27,6 +27,11 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive(),
   SMTP_USERNAME: z.string(),
   SMTP_PASSWORD: z.string(),
+  CLIENT_URL: z.string().url(),
+  GOOGLE_OAUTH_CLIENT_ID: z.string(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
+  GOOGLE_OAUTH_PROJECT_ID: z.string(),
+  GOOGLE_OAUTH_CALLBACK_URL: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

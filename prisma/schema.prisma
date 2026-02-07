@@ -34,25 +34,26 @@ model User {
   profile                  Profile?
   isOnboardingCompleted    Boolean             @default(false)
   displayPreferences       DisplayPreference[]
+  googleId                 String?
 
   @@map("users")
 }
 
 model Profile {
-  id          String             @id @default(uuid())
-  userId      String             @unique
-  createdAt   DateTime           @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
-  avatarUrl   String?
-  bio         String?
+  id        String             @id @default(uuid())
+  userId    String             @unique
+  createdAt DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @db.Timestamptz(6)
+  avatarUrl String?
+  bio       String?
   // displayName String?
-  goals       String[]           @default([])
-  isPublic    Boolean            @default(true)
-  location    String?
-  username    String?            @unique
-  links       Link[]
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  display     DisplayPreference?
+  goals     String[]           @default([])
+  isPublic  Boolean            @default(true)
+  location  String?
+  username  String?            @unique
+  links     Link[]
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  display   DisplayPreference?
 
   @@map("profiles")
 }
