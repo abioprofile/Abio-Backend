@@ -59,22 +59,22 @@ export const updateFontSchema = z.object({
         /^[a-zA-Z0-9-]+$/,
         "Font name can only contain letters, numbers, hyphens",
       ),
-    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
+    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/),
     strokeColor: z
       .string()
-      .regex(/^#[a-zA-Z0-9]{3,6}$/)
+      .regex(/^#[a-zA-Z0-9]{3,8}$/)
       .optional(),
   }),
 });
 
 export const updateCornersSchema = z.object({
   body: z.object({
-    type: z.string(),
-    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/).optional(),
-    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/).optional(),
+    type: z.enum<string, ['sharp', 'curved', 'round']>(['sharp', 'curved', 'round']),
+    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/).optional(),
+    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/).optional(),
     opacity: z.number().min(0).max(1).optional(),
     shadowSize: z.string(),
-    shadowColor: z.string().regex(/^#[a-zA-Z0-9]{3,6}$/),
+    shadowColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/),
   }),
 });
 
@@ -84,7 +84,7 @@ export const updateBackgroundSchema = z.object({
     image: z.string().url().optional(),
     backgroundColor: z
       .string()
-      .regex(/^#[a-zA-Z0-9]{3,6}$/)
+      .regex(/^#[a-zA-Z0-9]{3,8}$/)
       .or(
         z.array(
           z.object({
