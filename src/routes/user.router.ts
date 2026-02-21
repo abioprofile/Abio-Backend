@@ -9,6 +9,7 @@ import {
   createUserSchema,
   updateUserSchema,
   deleteAccountSchema,
+  updateEmailSchema,
 } from "@/schemas/user.schema";
 import ProfileController from "../controllers/profile.controller";
 import { validateRequest } from "@/utils/httpHandlers";
@@ -56,6 +57,13 @@ userRouter.patch(
   authenticate,
   uploadImage.single("avatar"),
   ProfileController.updateAvatar,
+);
+
+userRouter.patch(
+  "/profile/email",
+  authenticate,
+  validateRequest(updateEmailSchema), 
+  UserController.updateEmail,
 );
 
 userRouter.get("/preferences", authenticate, ProfileController.getDisplaySettings);

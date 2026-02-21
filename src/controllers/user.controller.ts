@@ -10,31 +10,32 @@ import { handleServiceResponse } from "@/utils/httpHandlers";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import AppError from "@/utils/appError";
 import { StatusCodes } from "http-status-codes";
+import { ServiceResponse } from "@/utils/serviceResponse";
 
 class UserController {
   public createUser: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TCreateUser>,
       res: Response,
-      _next: NextFunction
+      _next: NextFunction,
     ) => {
       const serviceResponse = await userService.create(req.body);
       return handleServiceResponse(serviceResponse, res);
-    }
+    },
   );
   public getLoggedInUser: RequestHandler = catchAsync(
     async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
       const id = req.user.id;
       const serviceResponse = await userService.findById(id);
       return handleServiceResponse(serviceResponse, res);
-    }
+    },
   );
 
   public deleteMyAccount: RequestHandler = catchAsync(
     async (
       req: AuthenticatedRequest<{}, {}, TDeleteAccount>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       const user = req.user;
 
@@ -42,12 +43,12 @@ class UserController {
       const { password } = req.body;
       const isPasswordCorrect = await userService.comparePassword(
         password,
-        user.password
+        user.password,
       );
 
       if (!isPasswordCorrect) {
         return next(
-          new AppError("Incorrect password", StatusCodes.UNAUTHORIZED)
+          new AppError("Incorrect password", StatusCodes.UNAUTHORIZED),
         );
       }
 
@@ -59,7 +60,25 @@ class UserController {
       res.clearCookie("logged_in");
 
       return handleServiceResponse(serviceResponse, res);
-    }
+    },
+  );
+
+  public updateEmail: RequestHandler = catchAsync(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const user = req.user;
+      const { email } = req.body;
+
+      if (user.email == email) {
+        return handleServiceResponse(
+          ServiceResponse.success("", user, 200),
+          res,
+        );
+      }
+
+      const serviceResponse = await userService.updateEmail(user, email);
+
+      return handleServiceResponse(serviceResponse, res);
+    },
   );
 }
 

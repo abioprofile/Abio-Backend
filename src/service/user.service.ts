@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { TLogin, TCreateUser, TUpdateUser } from "@/schemas/index";
 import env from "@/env";
-import { prisma } from "@/server";
+import { logger, prisma } from "@/server";
 import { UserWithProfile, LoginResult } from "@/types";
 import { User } from "@prisma/client";
 import { AppError } from "@/utils/appError";
@@ -302,6 +302,42 @@ export class UserService {
   //   const token = signToken(user.id);
   //   return token;
   // }
+
+  async updateEmail(user: User, email: string): Promise<ServiceResponse> {
+    try {
+      const verificationOTP = await this.generateOTP();
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(verificationOTP)
+        .digest("hex");
+
+      // ! WE NEED TO DISCUSS VERIFICATION FOR THE NEW EMAIL
+
+      // Update user with new token
+      // const _user = await prisma.user.findUnique({
+      //   where: { id: user.id },
+      //   include: {
+      //     profile: true,
+      //   },
+      // });
+      // await new Email(_user as UserWithProfile, verificationOTP).sendEmailVerification();
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email,
+          isEmailVerified: false,
+          emailVerificationToken: hashedToken,
+          emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      return await this.resendVerificationEmail(email);
+    } catch (error) {
+      logger.error(error);
+      return ServiceResponse.failure("An error occurred", null, 500);
+    }
+  }
 }
 
 export const userService = new UserService();

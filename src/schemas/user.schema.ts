@@ -48,7 +48,14 @@ export const deleteAccountSchema = z.object({
   }),
 });
 
+export const updateEmailSchema = z.object({
+  body: z.object({
+    email: z.string().email()
+  }),
+});
+
 export type TCreateUser = z.infer<typeof createUserSchema.shape.body>;
 export type TUpdateUser = z.infer<typeof updateUserSchema.shape.body>;
 export type TGetUser = z.infer<typeof getUserSchema.shape.params>;
 export type TDeleteAccount = z.infer<typeof deleteAccountSchema.shape.body>;
+export type TUpdateEmail = z.infer<typeof updateEmailSchema.shape.body>;

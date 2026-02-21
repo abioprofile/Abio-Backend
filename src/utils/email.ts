@@ -450,4 +450,7 @@ export default class Email {
     await transporter.sendMail(mailOptions);
   }
 
+  async confirmEmailUpdate(email: string) {
+    const subject = "Your email is being updated";
+  }
 }
