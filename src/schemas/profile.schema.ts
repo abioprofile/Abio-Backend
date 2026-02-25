@@ -84,15 +84,6 @@ export const updateBackgroundSchema = z.object({
     image: z.string().url().optional(),
     backgroundColor: z
       .string()
-      .regex(/^#[a-zA-Z0-9]{3,8}$/)
-      .or(
-        z.array(
-          z.object({
-            color: z.string(),
-            amount: z.number().min(0).max(1),
-          }),
-        ),
-      )
       .optional(),
   }),
 });
