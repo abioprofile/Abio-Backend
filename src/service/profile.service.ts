@@ -4,6 +4,7 @@ import { ServiceResponse } from "@/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "@/utils/appError";
 import { uploadToCloudinary } from "@/utils/cloudinary";
+import cache from "@/lib/cache";
 
 export class ProfileService {
   async getByUserId(userId: string) {
@@ -57,11 +58,10 @@ export class ProfileService {
           orderBy: { displayOrder: "asc" },
         },
         user: {
-          select: {name: true},
-        }
+          select: { name: true },
+        },
       },
     });
-
 
     if (
       profile?.username &&
@@ -80,6 +80,12 @@ export class ProfileService {
   }
 
   async getPublicByUsername(username: string) {
+    const data = await cache.get(`public_profiles:${username}`);
+
+    if (data) {
+      return ServiceResponse.success("Profile retrieved successfully", JSON.parse(data));
+    }
+
     const profile = await prisma.profile.findUnique({
       where: { username, isPublic: true },
       select: {
@@ -112,6 +118,7 @@ export class ProfileService {
       );
     }
 
+    cache.setex(`public_profiles:${username}`, 60 * 60, JSON.stringify(profile));
     return ServiceResponse.success("Profile retrieved successfully", profile);
   }
 
