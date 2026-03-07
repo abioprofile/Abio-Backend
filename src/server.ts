@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 
 import setupPassport from "@/service/passport";
 import passport from "passport";
+import themesRouter from "@/routes/themes.router";
 
 const logger = pino({ name: "server start" });
 const app: Express = express();
@@ -55,6 +56,9 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/waitlist", waitlistRouter);
 app.use("/api/v1/links", linkRouter);
 app.use("/api/v1/public", publicRouter);
+
+// My pattern for initiating routers
+app.use("/api/v1/themes", themesRouter());
 
 // Error handlers
 app.use(unexpectedRequest);

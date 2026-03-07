@@ -19,11 +19,11 @@ import jwt from "jsonwebtoken";
 import env from "@/env";
 import { generateUniqueId } from "@/utils/uniqueId";
 
-const signToken = (id: string): string => {
+const signToken = (payload: any): string => {
   const secret = env.JWT_SECRET;
   const expiresIn = env.JWT_EXPIRES_IN;
 
-  return jwt.sign({ id }, secret, { expiresIn } as any);
+  return jwt.sign(payload, secret, { expiresIn } as any);
 };
 
 class AuthController {
@@ -57,17 +57,17 @@ class AuthController {
         return next(
           new AppError(
             "Please verify your email address before logging in. Check your inbox for the verification code.",
-            403
-          )
+            403,
+          ),
         );
       }
 
       // Remove password from user object before sending response
       const { password: _, ...userWithoutPassword } = user;
 
-      const token = signToken(user.id);
+      const token = signToken({ id: user.id });
       const cookieExpirationInMs = Math.floor(
-        Number(process.env.JWT_COOKIE_EXPIRES_IN || 1) * 24 * 60 * 60 * 1000
+        Number(process.env.JWT_COOKIE_EXPIRES_IN || 1) * 24 * 60 * 60 * 1000,
       );
       const expiresIn = new Date(Date.now() + cookieExpirationInMs);
 
@@ -102,7 +102,7 @@ class AuthController {
         },
         statusCode: StatusCodes.OK,
       });
-    }
+    },
   );
 
   public logout: RequestHandler = catchAsync(
@@ -115,14 +115,14 @@ class AuthController {
         data: null,
         success: true,
       });
-    }
+    },
   );
 
   public forgotPassword: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TForgotPassword>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       // 1) Get user based on POSTed email
       const user = await prisma.user.findUnique({
@@ -131,7 +131,7 @@ class AuthController {
 
       if (!user) {
         return next(
-          new AppError("There is no user with that email address", 404)
+          new AppError("There is no user with that email address", 404),
         );
       }
 
@@ -153,7 +153,7 @@ class AuthController {
       try {
         await new Email(
           { ...user, profile: null },
-          resetToken
+          resetToken,
         ).sendPasswordReset();
 
         res.status(200).json({
@@ -173,18 +173,18 @@ class AuthController {
         return next(
           new AppError(
             "There was an error sending the email. Try again later!",
-            500
-          )
+            500,
+          ),
         );
       }
-    }
+    },
   );
 
   public resetPassword: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TResetPassword>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       // 1) Get user based on the token
       const hashedToken = crypto
@@ -222,14 +222,14 @@ class AuthController {
         data: null,
         statusCode: StatusCodes.OK,
       });
-    }
+    },
   );
 
   public updatePassword: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TUpdatePassword>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       // 1) Get user from collection
       const user = await prisma.user.findUnique({
@@ -248,7 +248,7 @@ class AuthController {
       if (
         !(await userService.comparePassword(
           req.body.passwordCurrent,
-          user.password
+          user.password,
         ))
       ) {
         return next(new AppError("Your current password is wrong", 401));
@@ -269,39 +269,41 @@ class AuthController {
         data: null,
         statusCode: StatusCodes.OK,
       });
-    }
+    },
   );
 
   public verifyEmail: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TVerifyEmail>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       const serviceResponse = await userService.verifyEmail(req.body.token);
       return handleServiceResponse(serviceResponse, res);
-    }
+    },
   );
 
   public resendVerificationEmail: RequestHandler = catchAsync(
     async (
       req: Request<{}, {}, TResendVerificationEmail>,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       const serviceResponse = await userService.resendVerificationEmail(
-        req.body.email
+        req.body.email,
       );
       return handleServiceResponse(serviceResponse, res);
-    }
+    },
   );
 
   public loginWithGoogle: RequestHandler = catchAsync(
     async (req: Request, res: Response) => {
       const serviceResponse = await userService.oauthLogin(req.user);
 
-      return res.redirect(`${env.CLIENT_URL}/auth/callback?token=${serviceResponse.data.token}`);
-    }
+      return res.redirect(
+        `${env.CLIENT_URL}/auth/callback?token=${serviceResponse.data.token}`,
+      );
+    },
   );
 }
 

@@ -69,9 +69,19 @@ export const updateFontSchema = z.object({
 
 export const updateCornersSchema = z.object({
   body: z.object({
-    type: z.enum<string, ['sharp', 'curved', 'round']>(['sharp', 'curved', 'round']),
-    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/).optional(),
-    strokeColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/).optional(),
+    type: z.enum<string, ["sharp", "curved", "round"]>([
+      "sharp",
+      "curved",
+      "round",
+    ]),
+    fillColor: z
+      .string()
+      .regex(/^#[a-zA-Z0-9]{3,8}$/)
+      .optional(),
+    strokeColor: z
+      .string()
+      .regex(/^#[a-zA-Z0-9]{3,8}$/)
+      .optional(),
     opacity: z.number().min(0).max(1).optional(),
     shadowSize: z.string(),
     shadowColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/),
@@ -82,9 +92,7 @@ export const updateBackgroundSchema = z.object({
   body: z.object({
     type: z.string(),
     image: z.string().url().optional(),
-    backgroundColor: z
-      .string()
-      .optional(),
+    backgroundColor: z.string().optional(),
   }),
 });
 
@@ -96,3 +104,14 @@ export type TUpdateFont = z.infer<typeof updateFontSchema.shape.body>;
 export type TUpdateBackground = z.infer<
   typeof updateBackgroundSchema.shape.body
 >;
+
+export const createThemeSchema = z.object({
+  body: z.object({
+    name: z.string(),
+    font_config: updateFontSchema.shape.body,
+    corner_config: updateCornersSchema.shape.body,
+    wallpaper_config: updateBackgroundSchema.shape.body,
+  }),
+});
+
+export type TCreateTheme = z.infer<typeof createThemeSchema.shape.body>;

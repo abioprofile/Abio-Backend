@@ -36,6 +36,8 @@ model User {
   displayPreferences       DisplayPreference[]
   googleId                 String?
 
+  roles UserRole[]
+
   @@map("users")
 }
 
@@ -78,17 +80,70 @@ model Link {
 }
 
 model DisplayPreference {
-  id               String   @id @default(uuid())
+  id               String        @id @default(uuid())
   userId           String
-  profileId        String   @unique
+  profileId        String        @unique
   selected_theme   String?
-  font_config      Json?    @default("{}")
-  corner_config    Json?    @default("{}")
-  wallpaper_config Json?    @default("{}")
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
-  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  font_config      Json?         @default("{}")
+  corner_config    Json?         @default("{}")
+  wallpaper_config Json?         @default("{}")
+  createdAt        DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(6)
+  profile          Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme            DisplayTheme? @relation(fields: [selected_theme], references: [id])
 
   @@map("display_preferences")
+}
+
+model DisplayTheme {
+  id                 String              @id @default(uuid())
+  name               String              @unique
+  active             Boolean             @default(true)
+  font_config        Json?               @default("{}")
+  corner_config      Json?               @default("{}")
+  wallpaper_config   Json?               @default("{}")
+  createdAt          DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(6)
+  displayPreferences DisplayPreference[]
+
+  @@map("theme_configurations")
+}
+
+model Role {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           Int @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id     Int    @id @default(autoincrement())
+  userId String
+  roleId Int
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@map("user_roles")
 }
