@@ -59,7 +59,7 @@ export const updateFontSchema = z.object({
         /^[a-zA-Z0-9-]+$/,
         "Font name can only contain letters, numbers, hyphens",
       ),
-    fillColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/),
+    fillColor: z.string().regex(/^#?[a-zA-Z0-9]{3,8}$/),
     strokeColor: z
       .string()
       .regex(/^#[a-zA-Z0-9]{3,8}$/)
@@ -80,11 +80,11 @@ export const updateCornersSchema = z.object({
       .optional(),
     strokeColor: z
       .string()
-      .regex(/^#[a-zA-Z0-9]{3,8}$/)
+      .regex(/^#?[a-zA-Z0-9]{3,8}$/)
       .optional(),
-    opacity: z.number().min(0).max(1).optional(),
+    opacity: z.coerce.number().min(0).max(1).optional(),
     shadowSize: z.string(),
-    shadowColor: z.string().regex(/^#[a-zA-Z0-9]{3,8}$/),
+    shadowColor: z.string().regex(/^#?[a-zA-Z0-9]{3,8}$/),
   }),
 });
 

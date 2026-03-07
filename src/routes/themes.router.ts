@@ -14,7 +14,7 @@ export default function themesRouter(): Router {
     "/",
     authenticate,
     hasRole("admin"),
-    uploadImage.single("image"),
+    uploadImage.single("wallpaper_config[image]"),
     validateRequest(createThemeSchema),
     ThemeController.store,
   );
