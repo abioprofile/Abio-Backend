@@ -1,5 +1,7 @@
 import AuthController from "@/controllers/auth.controller";
 import { authenticate } from "@/middleware/auth.middleware";
+import { verify2FaSchema } from "@/schemas/auth.schema";
+// import { deleteAccountSchema } from "@/schemas/auth.schema";
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -66,5 +68,15 @@ authRouter.patch(
   validateRequest(updatePasswordSchema),
   AuthController.updatePassword,
 );
+
+// authRouter.delete(
+//   '/delete-account',
+//   authenticate,
+//   validateRequest(deleteAccountSchema),
+//   AuthController.closeAccount,
+// );
+
+authRouter.get('/2fa/totp/activate', authenticate, AuthController.setup2Fa);
+authRouter.post('/2fa/totp/verify', validateRequest(verify2FaSchema), AuthController.verify2Fa);
 
 export default authRouter;

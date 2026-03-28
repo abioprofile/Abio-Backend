@@ -18,6 +18,8 @@ import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import env from "@/env";
 import { generateUniqueId } from "@/utils/uniqueId";
+import { TVerify2Fa } from "@/schemas/auth.schema";
+// import { TDeleteAccount, TVerify2Fa } from "@/schemas/auth.schema";
 
 const signToken = (payload: any): string => {
   const secret = env.JWT_SECRET;
@@ -305,6 +307,26 @@ class AuthController {
       );
     },
   );
+
+  // public closeAccount: RequestHandler = catchAsync(
+  //   async (req: Request<null, null, TDeleteAccount>, res: Response) => {
+  //     const serviceResponse = await userService.delete();
+  //   },
+  // );
+
+  public setup2Fa: RequestHandler = catchAsync(
+    async (req: Request, res:Response) => {
+      const serviceResponse = await userService.setup2Fa(req.user);
+      return handleServiceResponse(serviceResponse, res);
+    }
+  )
+
+  public verify2Fa: RequestHandler = catchAsync(
+    async (req: Request<null, null, TVerify2Fa>, res: Response) => {
+      const serviceResponse = await userService.verify2FAOtp(req.body.email, req.body.token);
+      return handleServiceResponse(serviceResponse, res);
+    }
+  )
 }
 
 export default new AuthController();

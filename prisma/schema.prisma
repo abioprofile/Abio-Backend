@@ -35,6 +35,7 @@ model User {
   isOnboardingCompleted    Boolean             @default(false)
   displayPreferences       DisplayPreference[]
   googleId                 String?
+  totp_secret               String?
 
   roles UserRole[]
 

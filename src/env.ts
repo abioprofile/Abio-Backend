@@ -33,6 +33,7 @@ const envSchema = z.object({
   GOOGLE_OAUTH_PROJECT_ID: z.string(),
   GOOGLE_OAUTH_CALLBACK_URL: z.string(),
   REDIS_URL: z.string().url(),
+  TOTP_SECRET: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
