@@ -300,7 +300,7 @@ class AuthController {
     async (req: Request, res: Response) => {
       const serviceResponse = await userService.oauthLogin(req.user);
 
-      return res.redirect(`${env.CLIENT_URL}/auth/callback?token=${serviceResponse.data.token}`);
+      return res.redirect(`${env.CLIENT_URL}/auth/google/callback?token=${serviceResponse.data.token}`);
     }
   );
 }
