@@ -1,16 +1,20 @@
 import { AuthenticatedRequest } from "@/types/express";
-import { TUpdateProfile, TCheckUsername } from "@/schemas/profile.schema";
+import { TUpdateProfile, TCheckUsername, TUpdateFont, TUpdateCorners, TUpdateBackground, TUpdatePreferences } from "@/schemas/profile.schema";
 
 export interface UpdateProfileRequest extends AuthenticatedRequest {
-  body: TUpdateProfile;
+	body: TUpdateProfile;
 }
 
 export interface CheckUsernameRequest {
-  query: TCheckUsername;
+	query: TCheckUsername;
 }
 
 export interface GetPublicProfileRequest {
-  params: {
-    username: string;
-  };
+	params: {
+		username: string;
+	};
+}
+
+export interface UpdatePreferencesRequest {
+	body: TUpdatePreferences,
 }

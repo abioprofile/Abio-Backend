@@ -5,7 +5,7 @@ import { pino } from "pino";
 import path from "path";
 
 import globalErrorHandler, {
-  unexpectedRequest,
+	unexpectedRequest,
 } from "@/middleware/errorHandler";
 import authRouter from "@/routes/auth.router";
 import userRouter from "@/routes/user.router";
@@ -24,7 +24,7 @@ const logger = pino({ name: "server start" });
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
+	app.use(morgan("dev"));
 }
 
 // Set the application to trust the reverse proxy
@@ -39,10 +39,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
-  cors({
-    origin: env.CORS_ORIGINS,
-    credentials: true,
-  })
+	cors({
+		origin: env.CORS_ORIGINS,
+		credentials: true,
+	})
 );
 app.use(helmet());
 
