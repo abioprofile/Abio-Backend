@@ -98,6 +98,19 @@ export const resendVerificationEmailSchema = z.object({
   }),
 });
 
+// export const deleteAccountSchema = z.object({
+//   body: z.object({
+//     confirmation: z.string(),
+//   }),
+// });
+
+export const verify2FaSchema = z.object({
+  body: z.object({
+    token: z.string().regex(/^\d{6}$/),
+    email: z.string().email(),
+  }),
+});
+
 export type TLogin = z.infer<typeof loginSchema.shape.body>;
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema.shape.body>;
 export type TResetPassword = z.infer<typeof resetPasswordSchema.shape.body>;
@@ -106,3 +119,5 @@ export type TVerifyEmail = z.infer<typeof verifyEmailSchema.shape.body>;
 export type TResendVerificationEmail = z.infer<
   typeof resendVerificationEmailSchema.shape.body
 >;
+// export type TDeleteAccount = z.infer<typeof deleteAccountSchema.shape.body>;
+export type TVerify2Fa = z.infer<typeof verify2FaSchema.shape.body>;

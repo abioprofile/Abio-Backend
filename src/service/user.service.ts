@@ -9,9 +9,16 @@ import { logger, prisma } from "@/server";
 import { UserWithProfile, LoginResult } from "@/types";
 import { User } from "@prisma/client";
 import { AppError } from "@/utils/appError";
-import { customAlphabet } from "nanoid";
+import { customAlphabet, nanoid } from "nanoid";
 import Email from "@/utils/email";
-import { Response } from "express";
+import QRCode from "qrcode";
+
+import { generate, verify } from "@otplib/totp";
+import { crypto as tCrypto } from "@otplib/plugin-crypto-node";
+import { base32 } from "@otplib/plugin-base32-scure";
+import { generateTOTP } from "@otplib/uri";
+import { generateRandomBase32 } from "@/utils/uniqueId";
+import { decrypt, encrypt } from "@/utils/encrpyt";
 
 const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;
@@ -168,6 +175,12 @@ export class UserService {
         null,
         StatusCodes.BAD_REQUEST,
       );
+    }
+
+    if (foundUser.totp_secret != null) {
+      return ServiceResponse.success("", {
+        action: "2fa",
+      });
     }
 
     const token = signToken(foundUser.id);
@@ -337,6 +350,94 @@ export class UserService {
       logger.error(error);
       return ServiceResponse.failure("An error occurred", null, 500);
     }
+  }
+
+  async setup2Fa(user: UserWithProfile, type: string = "totp") {
+    if (!user.profile)
+      return ServiceResponse.failure("User onboarding incomplete", null, 419);
+
+    if (user.totp_secret != null && user.totp_secret.length >= 1)
+      return ServiceResponse.failure("Existing 2FA found", 403);
+
+    const secret = generateRandomBase32();
+    const hashedsecret = encrypt(secret);
+
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        totp_secret: hashedsecret,
+      },
+    });
+
+    const url = generateTOTP({
+      issuer: "abio.site",
+      secret,
+      label: "Abio",
+      period: 30,
+      algorithm: "sha1",
+    });
+
+    return ServiceResponse.success(
+      "OTP configured",
+      {
+        secret,
+        url,
+        qrcode: await QRCode.toDataURL(url, {
+          version: 6,
+          errorCorrectionLevel: "medium",
+        }),
+      },
+      200,
+    );
+  }
+
+  async verify2FAOtp(email: string, code: string) {
+    const user = await prisma.user.findFirst({
+      where: {
+        email,
+      },
+      include: {
+        profile: true,
+        roles: true,
+      },
+    });
+
+    if (!user) {
+      return ServiceResponse.failure("User not found.", null, 400);
+    }
+
+    if (!user.totp_secret)
+      return ServiceResponse.failure(
+        "User does not have 2FA configured.",
+        null,
+        419,
+      );
+
+    const secret = decrypt(user.totp_secret!);
+
+    const result = await verify({
+      secret,
+      token: code,
+      crypto: tCrypto,
+      algorithm: "sha1",
+      digits: 6,
+      period: 30,
+      epochTolerance: 5,
+      base32,
+    });
+
+    if (!result.valid) {
+      return ServiceResponse.failure("OTP Verification failed", null);
+    }
+
+    const token = signToken(user.id);
+
+    return ServiceResponse.success("Logged in successfully", {
+      user: user,
+      token,
+    });
   }
 }
 

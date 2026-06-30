@@ -1,3 +1,4 @@
+import cache from "@/lib/cache";
 import {
 	TUpdateBackground,
 	TUpdateCorners,
@@ -38,8 +39,13 @@ class PreferenceService {
 				userId,
 				profileId: profile.data!.id,
 				wallpaper_config: update,
+			},
+			include: {
+				profile: true,
 			}
 		});
+
+		cache.del(`public_profiles:${settings.profile.username}`);
 
 		return ServiceResponse.success(
 			"Wallpaper settings updated successfully",
@@ -65,7 +71,12 @@ class PreferenceService {
 			update: {
 				font_config: data,
 			},
+			include: {
+				profile: true,
+			}
 		});
+
+		cache.del(`public_profiles:${settings.profile.username}`);
 
 		return ServiceResponse.success("Settings updated", settings);
 	}
@@ -87,7 +98,12 @@ class PreferenceService {
 				userId,
 				corner_config: data,
 			},
+			include: {
+				profile: true,
+			}
 		});
+
+		cache.del(`public_profiles:${settings.profile.username}`);
 
 		return ServiceResponse.success(
 			"Corner settings updated successfully",
@@ -144,7 +160,13 @@ class PreferenceService {
 				userId,
 				...settingsData,
 			},
+			include: {
+				profile: true,
+			}
 		});
+
+
+		cache.del(`public_profiles:${settings.profile.username}`);
 
 		return ServiceResponse.success(
 			"Corner settings updated successfully",

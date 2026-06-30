@@ -1,9 +1,10 @@
 import { promisify } from "util";
-import { prisma } from '@/server'
+import { logger, prisma } from "@/server";
 import AppError from "@/utils/appError";
 import catchAsync from "@/utils/catchAsync";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { AuthenticatedRequest } from "@/types/express";
 
 declare global {
   namespace Express {
@@ -28,40 +29,51 @@ export const authenticate = catchAsync(
 
     if (!token) {
       return next(
-        new AppError("You are not logged in! Please log in to get access.", 401)
+        new AppError(
+          "You are not logged in! Please log in to get access.",
+          401,
+        ),
       );
     }
 
     // 2) Verification token
     const decoded = (await promisify<any>(jwt.verify as any)(
       token,
-      process.env.JWT_SECRET as string
+      process.env.JWT_SECRET as string,
     )) as jwt.JwtPayload;
 
     // 3) Check if user still exists
     const currentUser = await prisma.user.findUnique({
       where: { id: decoded.id },
-      include: { profile: true },
+      include: {
+        profile: true,
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
     });
-    
+
     if (!currentUser) {
       return next(
         new AppError(
           "The user belonging to this token does no longer exist.",
-          401
-        )
+          401,
+        ),
       );
     }
 
     // 4) Check if user changed password after the token was issued
     if (decoded.iat && currentUser.passwordChangedAt) {
-      const changedTimestamp = new Date(currentUser.passwordChangedAt).getTime() / 1000;
+      const changedTimestamp =
+        new Date(currentUser.passwordChangedAt).getTime() / 1000;
       if (decoded.iat < changedTimestamp) {
         return next(
           new AppError(
             "User recently changed password! Please log in again.",
-            401
-          )
+            401,
+          ),
         );
       }
     }
@@ -70,7 +82,7 @@ export const authenticate = catchAsync(
     req.user = currentUser;
     res.locals.user = currentUser;
     next();
-  }
+  },
 );
 
 export const hasProfile = catchAsync(
@@ -78,14 +90,34 @@ export const hasProfile = catchAsync(
     if (!req.user) {
       return next(new AppError("Not authenticated", 401));
     }
-    
+
     const profile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
-    
-    if (profile) {
-      return next();
+
+    if (!profile) {
+      return next(
+        new AppError("User profile not found. Complete onboarding.", 404),
+      );
     }
-    return next(new AppError("User profile not found. Complete onboarding.", 404));
-  }
+    
+    return next();
+  },
 );
+
+export const hasRole = (_role: string) =>
+  catchAsync(async function (
+    req: AuthenticatedRequest,
+    _res: Response,
+    next: NextFunction,
+  ) {
+    if (!req.user) {
+      return next(new AppError("Not authenticated", 401));
+    }
+
+    if (!req.user.roles.find(({ role }) => role.name === _role)) {
+      return next(new AppError("Not authorized", 403));
+    }
+
+    return next();
+  });

@@ -19,7 +19,7 @@ export type UserWithProfile = Prisma.UserGetPayload<{
 
 // Type for the login method return
 export interface LoginResult {
-  user: {
+  user?: {
     id: string;
     name: string;
     email: string;
@@ -27,7 +27,8 @@ export interface LoginResult {
     createdAt: Date;
     updatedAt: Date;
   };
-  token: string;
+  token?: string;
+  action?: string;
 }
 
 // Re-export device types
