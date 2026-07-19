@@ -147,8 +147,8 @@ class AuthController {
 			await prisma.user.update({
 				where: { id: user.id },
 				data: {
-					emailVerificationToken: hashedToken,
-					emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+					passwordResetToken: hashedToken,
+					passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
 				},
 			});
 
