@@ -52,10 +52,14 @@ app.use(pp.initialize());
 
 // Routes
 app.use("/api/v1/user", userRouter);
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/waitlist", waitlistRouter);
-app.use("/api/v1/links", linkRouter);
-app.use("/api/v1/public", publicRouter);
+
+const router = express.Router();
+router.use("/waitlist", waitlistRouter);
+router.use("/auth", authRouter);
+router.use("/links", linkRouter);
+router.use("/public", publicRouter);
+
+app.use("/api/v1", router);
 
 // My pattern for initiating routers
 app.use("/api/v1/themes", themesRouter());

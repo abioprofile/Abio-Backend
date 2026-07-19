@@ -3,55 +3,55 @@ import { PASSWORD_COMPLEXITY_REGEX } from "@/utils/constants";
 import { zPhone } from "@/utils/zod/phone";
 
 export const createUserSchema = z.object({
-  body: z
-    .object({
-      name: z.string({ required_error: "Name is required" }),
-      email: z
-        .string({ required_error: "Email is required" })
-        .email("Invalid email address"),
-      password: z
-        .string({ required_error: "Password is required" })
-        .min(8, "Password must be at least 8 characters long")
-        .regex(
-          PASSWORD_COMPLEXITY_REGEX,
-          "Password must include a letter, a number, and a special character"
-        ),
-      passwordConfirm: z.string({
-        required_error: "Password Confirm is required",
-      }),
-    })
-    .refine((data) => data.password === data.passwordConfirm, {
-      path: ["passwordConfirm"],
-      message: "Passwords do not match",
-    }),
+	body: z
+		.object({
+			name: z.string({ required_error: "Name is required" }),
+			email: z
+				.string({ required_error: "Email is required" })
+				.email("Invalid email address"),
+			password: z
+				.string({ required_error: "Password is required" })
+				.min(8, "Password must be at least 8 characters long")
+				.regex(
+					process.env.NODE_ENV == 'production' ? PASSWORD_COMPLEXITY_REGEX : /.+/,
+					"Password must include a letter, a number, and a special character"
+				),
+			passwordConfirm: z.string({
+				required_error: "Password Confirm is required",
+			}),
+		})
+		.refine((data) => data.password === data.passwordConfirm, {
+			path: ["passwordConfirm"],
+			message: "Passwords do not match",
+		}),
 });
 
 export const updateUserSchema = z.object({
-  body: z
-    .object({
-      name: z.string().optional(),
-      email: z.string().email().optional(),
-      phoneNumber: zPhone.optional(),
-    })
-    .partial(),
+	body: z
+		.object({
+			name: z.string().optional(),
+			email: z.string().email().optional(),
+			phoneNumber: zPhone.optional(),
+		})
+		.partial(),
 });
 
 export const getUserSchema = z.object({
-  params: z.object({
-    id: z.string({ required_error: "User ID is required" }),
-  }),
+	params: z.object({
+		id: z.string({ required_error: "User ID is required" }),
+	}),
 });
 
 export const deleteAccountSchema = z.object({
-  body: z.object({
-    password: z.string({ required_error: "Password is required to delete your account" }),
-  }),
+	body: z.object({
+		password: z.string({ required_error: "Password is required to delete your account" }),
+	}),
 });
 
 export const updateEmailSchema = z.object({
-  body: z.object({
-    email: z.string().email()
-  }),
+	body: z.object({
+		email: z.string().email()
+	}),
 });
 
 export type TCreateUser = z.infer<typeof createUserSchema.shape.body>;
