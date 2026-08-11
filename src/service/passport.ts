@@ -1,5 +1,5 @@
 import { prisma } from "@/server";
-import { UserService } from "@/service/user.service";
+import { findByEmail } from "@/modules/users/user.service";
 import passport, { PassportStatic } from "passport";
 import { Profile, Strategy as GoogleStrategy, VerifyCallback } from "passport-google-oauth20";
 
@@ -13,7 +13,7 @@ const setupPassport = (passport: PassportStatic) => {
         },
         async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
             const email = profile.emails![0].value;
-            let user = await (new UserService).findByEmail(email);
+            let user = await findByEmail(email);
 
             if (!user) {
                 user = await prisma.user.create({

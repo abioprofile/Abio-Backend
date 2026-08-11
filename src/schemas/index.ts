@@ -33,9 +33,21 @@ export type {
   TResendVerificationEmail,
 } from "./auth.schema";
 
-export { createUserSchema, updateUserSchema } from "./user.schema";
+// Re-export from modules for gradual migration of remaining importers
+export {
+  createUserSchema,
+  updateUserSchema,
+} from "@/modules/users/user.schemas";
+export type {
+  TCreateUser,
+  TUpdateUser,
+} from "@/modules/users/user.schemas";
 
-export type { TCreateUser, TUpdateUser } from "./user.schema";
-
-export { updateProfileSchema, checkUsernameSchema } from "./profile.schema";
-export type { TUpdateProfile, TCheckUsername } from "./profile.schema";
+export {
+  updateProfileSchema,
+  checkUsernameSchema,
+} from "@/modules/profiles/profile.schemas";
+export type {
+  TUpdateProfile,
+  TCheckUsername,
+} from "@/modules/profiles/profile.schemas";

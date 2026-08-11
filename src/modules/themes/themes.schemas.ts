@@ -1,9 +1,9 @@
-import z from "zod";
 import {
   updateFontSchema,
   updateCornersSchema,
   updateBackgroundSchema,
-} from "@/schemas/profile.schema";
+} from "@/modules/preferences/preferences.schemas";
+import z from "zod";
 
 export const createThemeSchema = z.object({
   body: z.object({

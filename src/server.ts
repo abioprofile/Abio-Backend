@@ -7,7 +7,9 @@ import globalErrorHandler, {
 	unexpectedRequest,
 } from "@/shared/middleware/errorHandler";
 import authRouter from "@/routes/auth.router";
-import userRouter from "@/routes/user.router";
+import userRouter from "@/modules/users/user.routes";
+import profileRouter from "@/modules/profiles/profile.routes";
+import preferencesRouter from "@/modules/preferences/preferences.routes";
 import waitlistRouter from "@/modules/waitlist/waitlist.routes";
 import linkRouter from "@/modules/links/link.routes";
 import publicRouter from "@/routes/public.router";
@@ -51,8 +53,10 @@ app.use(helmet());
 const pp = setupPassport(passport);
 app.use(pp.initialize());
 
-// Routes
+// User feature routers share /api/v1/user — profiles last (has /:username)
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/user", preferencesRouter);
+app.use("/api/v1/user", profileRouter);
 
 const router = express.Router();
 router.use("/waitlist", waitlistRouter);

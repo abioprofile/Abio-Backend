@@ -272,6 +272,64 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+    "/api/v1/user/signup": {
+      post: {
+        tags: ["Users"],
+        summary: "Sign up",
+        responses: {
+          "201": { description: "User created" },
+          "409": { description: "Email already exists" },
+        },
+      },
+    },
+    "/api/v1/user": {
+      get: {
+        tags: ["Users"],
+        summary: "Get logged-in user",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": { description: "Current user" },
+          "401": { description: "Unauthorized" },
+        },
+      },
+      delete: {
+        tags: ["Users"],
+        summary: "Delete account",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": { description: "Account deleted" },
+          "401": { description: "Wrong password or unauthorized" },
+        },
+      },
+    },
+    "/api/v1/user/profile": {
+      get: {
+        tags: ["Profiles"],
+        summary: "Get my profile",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: { "200": { description: "Profile" } },
+      },
+      patch: {
+        tags: ["Profiles"],
+        summary: "Update my profile",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: { "200": { description: "Updated" } },
+      },
+    },
+    "/api/v1/user/preferences": {
+      get: {
+        tags: ["Profiles"],
+        summary: "Get display preferences",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: { "200": { description: "Preferences" } },
+      },
+      put: {
+        tags: ["Profiles"],
+        summary: "Update all display preferences",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: { "200": { description: "Updated" } },
+      },
+    },
     "/api/v1/themes": {
       get: {
         tags: ["Themes"],

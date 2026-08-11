@@ -8,7 +8,7 @@ import type {
 	TVerifyEmail,
 	TResendVerificationEmail,
 } from "@/schemas/index";
-import { userService } from "@/service/user.service";
+import { userService } from "@/modules/users/user.service";
 import AppError from "@/shared/utils/appError";
 import catchAsync from "@/shared/utils/catchAsync";
 import Email from "@/shared/utils/email";
