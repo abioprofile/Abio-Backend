@@ -40,6 +40,37 @@ describe("Auth API", () => {
     vi.clearAllMocks();
   });
 
+  it("signs up a new user and creates a profile", async () => {
+    const email = `signup-${Date.now()}@test.abio.local`;
+    const res = await testApp.post(`${AUTH}/signup`).send({
+      name: "New User",
+      email,
+      password: "Password123!",
+      passwordConfirm: "Password123!",
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.email).toBe(email);
+    expect(res.body.data.profile).toBeTruthy();
+    expect(res.body.data.password).toBeUndefined();
+  });
+
+  it("rejects duplicate signup email with 409", async () => {
+    const email = `dup-${Date.now()}@test.abio.local`;
+    await createTestUser({ email });
+
+    const res = await testApp.post(`${AUTH}/signup`).send({
+      name: "Dup",
+      email,
+      password: "Password123!",
+      passwordConfirm: "Password123!",
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.success).toBe(false);
+  });
+
   it("logs in a verified user and sets cookies", async () => {
     const password = "Password123!";
     const user = await createTestUser({ password, isEmailVerified: true });

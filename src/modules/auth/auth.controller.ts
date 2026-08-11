@@ -17,6 +17,7 @@ import {
   loginSchema,
   resendVerificationEmailSchema,
   resetPasswordSchema,
+  signupSchema,
   updatePasswordSchema,
   verify2FaSchema,
   verifyEmailSchema,
@@ -44,6 +45,12 @@ const cookieOptions = () => {
         : "localhost",
   };
 };
+
+export const signup = catchAsync(async (req: Request, res: Response) => {
+  const { body } = parseRequest(signupSchema, req);
+  const serviceResponse = await authService.signup(body);
+  return handleServiceResponse(serviceResponse, res);
+});
 
 export const login = catchAsync(async (req: Request, res: Response) => {
   const { body } = parseRequest(loginSchema, req);

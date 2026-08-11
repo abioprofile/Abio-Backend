@@ -7,6 +7,7 @@ import { loginRateLimiter } from "./auth.rate-limit";
 
 const authRouter: Router = express.Router();
 
+authRouter.post("/signup", authController.signup);
 authRouter.post("/login", loginRateLimiter, authController.login);
 
 authRouter.get(

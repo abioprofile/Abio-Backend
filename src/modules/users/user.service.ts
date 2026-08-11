@@ -2,12 +2,11 @@ import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { TCreateUser, TUpdateUser } from "./user.schemas";
+import { TUpdateUser } from "./user.schemas";
 import { logger } from "@/server";
 import { prisma } from "@/shared/config/database";
 import { UserWithProfile } from "@/shared/types";
 import { User } from "@prisma/client";
-import { AppError } from "@/shared/utils/appError";
 import { customAlphabet } from "nanoid";
 import Email from "@/shared/utils/email";
 
@@ -26,60 +25,6 @@ export const comparePassword = async (
 
 export const hashPassword = async (password: string): Promise<string> => {
   return bcrypt.hash(password, 12);
-};
-
-export const create = async (
-  payload: TCreateUser
-): Promise<ServiceResponse<UserWithProfile | null>> => {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: payload.email },
-  });
-
-  if (existingUser) {
-    throw new AppError(
-      "A user with this email already exists.",
-      StatusCodes.CONFLICT
-    );
-  }
-
-  const verificationOTP = await generateOTP();
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(verificationOTP)
-    .digest("hex");
-
-  const user = await prisma.user.create({
-    data: {
-      email: payload.email,
-      name: payload.name,
-      password: payload.password,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  });
-
-  await prisma.profile.create({
-    data: {
-      userId: user.id,
-    },
-  });
-
-  const newUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    include: { profile: true },
-  });
-
-  try {
-    await new Email(newUser!, verificationOTP).sendEmailVerification();
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-  }
-
-  return ServiceResponse.success(
-    "User created successfully. Please check your email to verify your account.",
-    newUser,
-    StatusCodes.CREATED
-  );
 };
 
 export const findById = async (
@@ -177,7 +122,6 @@ export const updateEmail = async (
 
 /** Namespace object for existing `userService.method()` call sites. */
 export const userService = {
-  create,
   findById,
   findByEmail,
   update,

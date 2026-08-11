@@ -1,6 +1,32 @@
 import z from "zod";
 import { PASSWORD_COMPLEXITY_REGEX } from "@/shared/utils/constants";
 
+export const signupSchema = z.object({
+  body: z
+    .object({
+      name: z.string({ required_error: "Name is required" }),
+      email: z
+        .string({ required_error: "Email is required" })
+        .email("Invalid email address"),
+      password: z
+        .string({ required_error: "Password is required" })
+        .min(8, "Password must be at least 8 characters long")
+        .regex(
+          process.env.NODE_ENV == "production"
+            ? PASSWORD_COMPLEXITY_REGEX
+            : /.+/,
+          "Password must include a letter, a number, and a special character"
+        ),
+      passwordConfirm: z.string({
+        required_error: "Password Confirm is required",
+      }),
+    })
+    .refine((data) => data.password === data.passwordConfirm, {
+      path: ["passwordConfirm"],
+      message: "Passwords do not match",
+    }),
+});
+
 export const loginSchema = z.object({
   body: z.object({
     email: z
@@ -107,6 +133,7 @@ export const verify2FaSchema = z.object({
   }),
 });
 
+export type TSignup = z.infer<typeof signupSchema.shape.body>;
 export type TLogin = z.infer<typeof loginSchema.shape.body>;
 export type TForgotPassword = z.infer<typeof forgotPasswordSchema.shape.body>;
 export type TResetPassword = z.infer<typeof resetPasswordSchema.shape.body>;

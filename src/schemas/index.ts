@@ -17,6 +17,7 @@ export function clean<T extends object>(obj: T): Partial<T> {
 export type TUUI = z.infer<typeof UUIDSchema.shape.params>;
 
 export {
+  signupSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -26,6 +27,7 @@ export {
   verify2FaSchema,
 } from "@/modules/auth/auth.schemas";
 export type {
+  TSignup,
   TLogin,
   TForgotPassword,
   TResetPassword,
@@ -35,14 +37,8 @@ export type {
   TVerify2Fa,
 } from "@/modules/auth/auth.schemas";
 
-export {
-  createUserSchema,
-  updateUserSchema,
-} from "@/modules/users/user.schemas";
-export type {
-  TCreateUser,
-  TUpdateUser,
-} from "@/modules/users/user.schemas";
+export { updateUserSchema } from "@/modules/users/user.schemas";
+export type { TUpdateUser } from "@/modules/users/user.schemas";
 
 export {
   updateProfileSchema,

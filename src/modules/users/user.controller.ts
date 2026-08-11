@@ -10,17 +10,7 @@ import { StatusCodes } from "http-status-codes";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { prisma } from "@/shared/config/database";
 import { userService } from "./user.service";
-import {
-  createUserSchema,
-  deleteAccountSchema,
-  updateEmailSchema,
-} from "./user.schemas";
-
-export const createUser = catchAsync(async (req: Request, res: Response) => {
-  const { body } = parseRequest(createUserSchema, req);
-  const serviceResponse = await userService.create(body);
-  return handleServiceResponse(serviceResponse, res);
-});
+import { deleteAccountSchema, updateEmailSchema } from "./user.schemas";
 
 export const getLoggedInUser = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {

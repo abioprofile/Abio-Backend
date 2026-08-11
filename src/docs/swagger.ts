@@ -36,7 +36,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
   ],
   tags: [
     { name: "Auth", description: "Signup, login, password reset, OAuth, 2FA" },
-    { name: "Users", description: "Account and username checks" },
+    { name: "Users", description: "Account (me, delete, update email)" },
     { name: "Profiles", description: "Public/private profile and preferences" },
     { name: "Links", description: "Link CRUD, reorder, click tracking" },
     { name: "Themes", description: "Display themes" },
@@ -591,6 +591,24 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
 
     // ── Auth ────────────────────────────────────────────────
+    "/api/v1/auth/signup": {
+      post: {
+        tags: ["Auth"],
+        summary: "Sign up",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/SignupInput" },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "User created — check email to verify" },
+          "409": { description: "Email already exists" },
+        },
+      },
+    },
     "/api/v1/auth/login": {
       post: {
         tags: ["Auth"],
@@ -793,24 +811,6 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
 
     // ── Users ───────────────────────────────────────────────
-    "/api/v1/user/signup": {
-      post: {
-        tags: ["Users"],
-        summary: "Sign up",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/SignupInput" },
-            },
-          },
-        },
-        responses: {
-          "201": { description: "User created" },
-          "409": { description: "Email already exists" },
-        },
-      },
-    },
     "/api/v1/user": {
       get: {
         tags: ["Users"],

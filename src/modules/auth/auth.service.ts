@@ -26,6 +26,7 @@ import type {
   TForgotPassword,
   TLogin,
   TResetPassword,
+  TSignup,
   TUpdatePassword,
 } from "./auth.schemas";
 
@@ -33,6 +34,60 @@ export const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;
   const expiresIn = env.JWT_EXPIRES_IN;
   return jwt.sign({ id }, secret, { expiresIn } as any);
+};
+
+export const signup = async (
+  payload: TSignup
+): Promise<ServiceResponse<UserWithProfile | null>> => {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: payload.email },
+  });
+
+  if (existingUser) {
+    throw new AppError(
+      "A user with this email already exists.",
+      StatusCodes.CONFLICT
+    );
+  }
+
+  const verificationOTP = await generateOTP();
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(verificationOTP)
+    .digest("hex");
+
+  const user = await prisma.user.create({
+    data: {
+      email: payload.email,
+      name: payload.name,
+      password: payload.password,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  });
+
+  await prisma.profile.create({
+    data: {
+      userId: user.id,
+    },
+  });
+
+  const newUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: { profile: true },
+  });
+
+  try {
+    await new Email(newUser!, verificationOTP).sendEmailVerification();
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+  }
+
+  return ServiceResponse.success(
+    "User created successfully. Please check your email to verify your account.",
+    newUser,
+    StatusCodes.CREATED
+  );
 };
 
 export type LoginSuccess = {
