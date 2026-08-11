@@ -115,14 +115,3 @@ export type TUpdateBackground = z.infer<
 	typeof updateBackgroundSchema.shape.body
 >;
 export type TUpdatePreferences = z.infer<typeof updatePreferencesSchema.shape.body>;
-
-export const createThemeSchema = z.object({
-	body: z.object({
-		name: z.string(),
-		font_config: updateFontSchema.shape.body,
-		corner_config: updateCornersSchema.shape.body,
-		wallpaper_config: updateBackgroundSchema.shape.body,
-	}),
-});
-
-export type TCreateTheme = z.infer<typeof createThemeSchema.shape.body>;

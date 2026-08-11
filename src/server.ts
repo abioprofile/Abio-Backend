@@ -18,7 +18,7 @@ import { prisma } from "@/lib/prisma";
 import logger from "@/shared/config/logger";
 import setupPassport from "@/service/passport";
 import passport from "passport";
-import themesRouter from "@/routes/themes.router";
+import themesRouter from "@/modules/themes/themes.routes";
 import { requestLogger } from "@/shared/middleware/requestLogger";
 import { setupSwagger } from "@/docs/swagger";
 
@@ -62,8 +62,7 @@ router.use("/public", publicRouter);
 
 app.use("/api/v1", router);
 
-// My pattern for initiating routers
-app.use("/api/v1/themes", themesRouter());
+app.use("/api/v1/themes", themesRouter);
 
 app.get("/health", (_req, res) => {
 	res.json({

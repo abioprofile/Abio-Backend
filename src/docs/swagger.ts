@@ -160,6 +160,39 @@ All feature endpoints return a \`ServiceResponse\` envelope:
           updatedAt: { type: "string", format: "date-time" },
         },
       },
+      CreateThemeInput: {
+        type: "object",
+        required: ["name", "font_config", "corner_config", "wallpaper_config"],
+        properties: {
+          name: { type: "string", example: "Midnight" },
+          font_config: {
+            type: "object",
+            properties: {
+              name: { type: "string", example: "Inter" },
+              fillColor: { type: "string", example: "#111111" },
+              strokeColor: { type: "string" },
+            },
+          },
+          corner_config: {
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                enum: ["sharp", "curved", "round"],
+                example: "round",
+              },
+            },
+          },
+          wallpaper_config: {
+            type: "object",
+            properties: {
+              type: { type: "string", example: "solid" },
+              backgroundColor: { type: "string", example: "#ffffff" },
+              image: { type: "string", format: "uri" },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -233,6 +266,74 @@ All feature endpoints return a \`ServiceResponse\` envelope:
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/themes": {
+      get: {
+        tags: ["Themes"],
+        summary: "List display themes",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": {
+            description: "Themes list",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Themes"],
+        summary: "Create a display theme (admin)",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateThemeInput" },
+            },
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  "wallpaper_config[image]": {
+                    type: "string",
+                    format: "binary",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Theme created",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+          "403": {
+            description: "Admin role required",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
               },
             },
           },

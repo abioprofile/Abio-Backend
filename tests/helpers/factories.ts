@@ -44,3 +44,24 @@ export function signTestToken(userId: string) {
 export function authHeader(userId: string) {
   return { Authorization: `Bearer ${signTestToken(userId)}` };
 }
+
+/** Ensure an `admin` role exists and attach it to the user. */
+export async function createAdminUser(input: CreateTestUserInput = {}) {
+  const user = await createTestUser(input);
+
+  const role = await prisma.role.upsert({
+    where: { name: "admin" },
+    create: { name: "admin" },
+    update: {},
+  });
+
+  await prisma.userRole.create({
+    data: {
+      userId: user.id,
+      roleId: role.id,
+    },
+  });
+
+  return user;
+}
+
