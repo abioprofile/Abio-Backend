@@ -19,6 +19,9 @@ Some auth flows also set \`access\` / \`logged_in\` cookies.
 ## Response shape
 All feature endpoints return a \`ServiceResponse\` envelope:
 \`{ success, message, data, statusCode }\`
+
+## Passwords
+In production, passwords must be at least 8 characters and include a letter, a number, and a special character (\`@$!%*#?&\`). Example: \`Passw0rd!\`.
     `,
   },
   servers: [
@@ -77,6 +80,352 @@ All feature endpoints return a \`ServiceResponse\` envelope:
           statusCode: { type: "integer", example: 400 },
         },
       },
+
+      // ── Auth ──────────────────────────────────────────────
+      LoginInput: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            example: "Passw0rd!",
+          },
+        },
+        example: {
+          email: "ada@example.com",
+          password: "Passw0rd!",
+        },
+      },
+      ForgotPasswordInput: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+        },
+        example: { email: "ada@example.com" },
+      },
+      ResetPasswordInput: {
+        type: "object",
+        required: ["token", "password", "passwordConfirm"],
+        properties: {
+          token: {
+            type: "string",
+            minLength: 6,
+            maxLength: 6,
+            example: "123456",
+            description: "6-character reset OTP from email",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            minLength: 8,
+            example: "Passw0rd!",
+          },
+          passwordConfirm: {
+            type: "string",
+            format: "password",
+            example: "Passw0rd!",
+          },
+        },
+        example: {
+          token: "123456",
+          password: "Passw0rd!",
+          passwordConfirm: "Passw0rd!",
+        },
+      },
+      UpdatePasswordInput: {
+        type: "object",
+        required: ["passwordCurrent", "password", "passwordConfirm"],
+        properties: {
+          passwordCurrent: {
+            type: "string",
+            format: "password",
+            example: "OldPass1!",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            minLength: 8,
+            example: "Passw0rd!",
+            description:
+              "Must include a letter, a number, and a special character",
+          },
+          passwordConfirm: {
+            type: "string",
+            format: "password",
+            example: "Passw0rd!",
+          },
+        },
+        example: {
+          passwordCurrent: "OldPass1!",
+          password: "Passw0rd!",
+          passwordConfirm: "Passw0rd!",
+        },
+      },
+      VerifyEmailInput: {
+        type: "object",
+        required: ["token"],
+        properties: {
+          token: {
+            type: "string",
+            minLength: 6,
+            maxLength: 6,
+            example: "654321",
+            description: "6-digit email verification OTP",
+          },
+        },
+        example: { token: "654321" },
+      },
+      ResendVerificationEmailInput: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+        },
+        example: { email: "ada@example.com" },
+      },
+      Verify2FaInput: {
+        type: "object",
+        required: ["email", "token"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+          token: {
+            type: "string",
+            pattern: "^\\d{6}$",
+            example: "123456",
+            description: "6-digit TOTP code from authenticator app",
+          },
+        },
+        example: {
+          email: "ada@example.com",
+          token: "123456",
+        },
+      },
+
+      // ── Users ─────────────────────────────────────────────
+      SignupInput: {
+        type: "object",
+        required: ["name", "email", "password", "passwordConfirm"],
+        properties: {
+          name: { type: "string", example: "Ada Lovelace" },
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            minLength: 8,
+            example: "Passw0rd!",
+          },
+          passwordConfirm: {
+            type: "string",
+            format: "password",
+            example: "Passw0rd!",
+          },
+        },
+        example: {
+          name: "Ada Lovelace",
+          email: "ada@example.com",
+          password: "Passw0rd!",
+          passwordConfirm: "Passw0rd!",
+        },
+      },
+      DeleteAccountInput: {
+        type: "object",
+        required: ["password"],
+        properties: {
+          password: {
+            type: "string",
+            format: "password",
+            example: "Passw0rd!",
+            description: "Current account password",
+          },
+        },
+        example: { password: "Passw0rd!" },
+      },
+      UpdateEmailInput: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "new@example.com",
+          },
+        },
+        example: { email: "new@example.com" },
+      },
+
+      // ── Profiles ──────────────────────────────────────────
+      UpdateProfileInput: {
+        type: "object",
+        properties: {
+          username: {
+            type: "string",
+            minLength: 3,
+            maxLength: 30,
+            example: "ada_lovelace",
+            description: "Letters, numbers, hyphens, underscores only",
+          },
+          displayName: {
+            type: "string",
+            maxLength: 100,
+            example: "Ada Lovelace",
+          },
+          bio: {
+            type: "string",
+            maxLength: 500,
+            example: "Mathematician & first programmer",
+          },
+          location: {
+            type: "string",
+            maxLength: 100,
+            example: "London",
+          },
+          goals: {
+            type: "array",
+            maxItems: 10,
+            items: { type: "string", maxLength: 200 },
+            example: ["Ship Abio", "Write more"],
+          },
+          avatarUrl: {
+            type: "string",
+            format: "uri",
+            example: "https://cdn.example.com/avatars/ada.png",
+          },
+          isPublic: { type: "boolean", example: true },
+        },
+        example: {
+          username: "ada_lovelace",
+          displayName: "Ada Lovelace",
+          bio: "Mathematician & first programmer",
+          location: "London",
+          goals: ["Ship Abio"],
+          isPublic: true,
+        },
+      },
+
+      // ── Preferences ───────────────────────────────────────
+      FontConfigInput: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: {
+            type: "string",
+            example: "Inter",
+            description: "Letters, numbers, hyphens only",
+          },
+          fillColor: { type: "string", example: "#111111" },
+          strokeColor: { type: "string", example: "#000000" },
+        },
+        example: {
+          name: "Inter",
+          fillColor: "#111111",
+        },
+      },
+      CornerConfigInput: {
+        type: "object",
+        required: ["type"],
+        properties: {
+          type: {
+            type: "string",
+            enum: ["sharp", "curved", "round"],
+            example: "round",
+          },
+          fillColor: { type: "string", example: "#ffffff" },
+          strokeColor: { type: "string", example: "#e5e5e5" },
+          opacity: {
+            type: "number",
+            minimum: 0,
+            maximum: 1,
+            example: 0.9,
+          },
+          shadowSize: { type: "string", example: "8px" },
+          shadowColor: { type: "string", example: "rgba(0,0,0,0.15)" },
+        },
+        example: {
+          type: "round",
+          opacity: 0.9,
+        },
+      },
+      WallpaperConfigInput: {
+        type: "object",
+        required: ["type"],
+        properties: {
+          type: {
+            type: "string",
+            example: "solid",
+            description: 'e.g. "solid", "image", "gradient"',
+          },
+          image: {
+            type: "string",
+            format: "uri",
+            example: "https://cdn.example.com/bg.jpg",
+          },
+          backgroundColor: {
+            oneOf: [
+              { type: "string", example: "#ffffff" },
+              {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    color: { type: "string", example: "#111111" },
+                    amount: {
+                      type: "number",
+                      minimum: 0,
+                      maximum: 1,
+                      example: 0.5,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        example: {
+          type: "solid",
+          backgroundColor: "#ffffff",
+        },
+      },
+      UpdatePreferencesInput: {
+        type: "object",
+        required: ["font_config", "wallpaper_config", "corner_config"],
+        properties: {
+          font_config: { $ref: "#/components/schemas/FontConfigInput" },
+          wallpaper_config: {
+            $ref: "#/components/schemas/WallpaperConfigInput",
+          },
+          corner_config: { $ref: "#/components/schemas/CornerConfigInput" },
+        },
+        example: {
+          font_config: { name: "Inter", fillColor: "#111111" },
+          wallpaper_config: { type: "solid", backgroundColor: "#ffffff" },
+          corner_config: { type: "round" },
+        },
+      },
+
+      // ── Links ─────────────────────────────────────────────
       Link: {
         type: "object",
         properties: {
@@ -108,17 +457,26 @@ All feature endpoints return a \`ServiceResponse\` envelope:
             description:
               "Required when URL is not a recognized social platform",
           },
-          isVisible: { type: "boolean", default: true },
+          isVisible: { type: "boolean", default: true, example: true },
+        },
+        example: {
+          title: "GitHub",
+          url: "https://github.com/abio",
+          isVisible: true,
         },
       },
       UpdateLinkInput: {
         type: "object",
         properties: {
-          title: { type: "string" },
-          url: { type: "string" },
-          platform: { type: "string" },
-          isVisible: { type: "boolean" },
-          displayOrder: { type: "integer", minimum: 0 },
+          title: { type: "string", example: "GitHub Profile" },
+          url: { type: "string", example: "https://github.com/abio" },
+          platform: { type: "string", example: "GITHUB" },
+          isVisible: { type: "boolean", example: true },
+          displayOrder: { type: "integer", minimum: 0, example: 0 },
+        },
+        example: {
+          title: "GitHub Profile",
+          isVisible: true,
         },
       },
       ReorderLinksInput: {
@@ -131,13 +489,31 @@ All feature endpoints return a \`ServiceResponse\` envelope:
               type: "object",
               required: ["id", "displayOrder"],
               properties: {
-                id: { type: "string", format: "uuid" },
-                displayOrder: { type: "integer", minimum: 0 },
+                id: {
+                  type: "string",
+                  format: "uuid",
+                  example: "550e8400-e29b-41d4-a716-446655440000",
+                },
+                displayOrder: { type: "integer", minimum: 0, example: 0 },
               },
             },
           },
         },
+        example: {
+          links: [
+            {
+              id: "550e8400-e29b-41d4-a716-446655440000",
+              displayOrder: 0,
+            },
+            {
+              id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+              displayOrder: 1,
+            },
+          ],
+        },
       },
+
+      // ── Waitlist / Themes ─────────────────────────────────
       CreateWaitlistInput: {
         type: "object",
         required: ["name", "email"],
@@ -148,6 +524,10 @@ All feature endpoints return a \`ServiceResponse\` envelope:
             format: "email",
             example: "ada@example.com",
           },
+        },
+        example: {
+          name: "Ada Lovelace",
+          email: "ada@example.com",
         },
       },
       WaitlistEntry: {
@@ -165,32 +545,17 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         required: ["name", "font_config", "corner_config", "wallpaper_config"],
         properties: {
           name: { type: "string", example: "Midnight" },
-          font_config: {
-            type: "object",
-            properties: {
-              name: { type: "string", example: "Inter" },
-              fillColor: { type: "string", example: "#111111" },
-              strokeColor: { type: "string" },
-            },
-          },
-          corner_config: {
-            type: "object",
-            properties: {
-              type: {
-                type: "string",
-                enum: ["sharp", "curved", "round"],
-                example: "round",
-              },
-            },
-          },
+          font_config: { $ref: "#/components/schemas/FontConfigInput" },
+          corner_config: { $ref: "#/components/schemas/CornerConfigInput" },
           wallpaper_config: {
-            type: "object",
-            properties: {
-              type: { type: "string", example: "solid" },
-              backgroundColor: { type: "string", example: "#ffffff" },
-              image: { type: "string", format: "uri" },
-            },
+            $ref: "#/components/schemas/WallpaperConfigInput",
           },
+        },
+        example: {
+          name: "Midnight",
+          font_config: { name: "Inter", fillColor: "#111111" },
+          corner_config: { type: "round" },
+          wallpaper_config: { type: "solid", backgroundColor: "#0a0a0a" },
         },
       },
     },
@@ -224,21 +589,34 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+
+    // ── Auth ────────────────────────────────────────────────
     "/api/v1/auth/login": {
       post: {
         tags: ["Auth"],
         summary: "Log in with email and password",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/LoginInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Logged in (sets access + logged_in cookies)" },
           "401": { description: "Incorrect email or password" },
           "403": { description: "Email not verified" },
+          "429": { description: "Too many login attempts" },
         },
       },
     },
     "/api/v1/auth/logout": {
       post: {
         tags: ["Auth"],
-        summary: "Log out (clears auth cookies)",
+        summary: "Log out (clears auth cookies + blacklists JWT)",
+        description:
+          "Optional: send Bearer token or access cookie so the JWT is blacklisted in Redis immediately.",
         responses: {
           "200": { description: "Logged out" },
         },
@@ -248,6 +626,14 @@ All feature endpoints return a \`ServiceResponse\` envelope:
       post: {
         tags: ["Auth"],
         summary: "Request password reset email",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ForgotPasswordInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Reset token emailed" },
           "404": { description: "Unknown email" },
@@ -258,6 +644,14 @@ All feature endpoints return a \`ServiceResponse\` envelope:
       post: {
         tags: ["Auth"],
         summary: "Reset password with emailed token",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ResetPasswordInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Password reset" },
           "400": { description: "Invalid or expired token" },
@@ -269,6 +663,14 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         tags: ["Auth"],
         summary: "Change password while authenticated",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdatePasswordInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Password updated" },
           "401": { description: "Wrong current password or unauthorized" },
@@ -279,6 +681,14 @@ All feature endpoints return a \`ServiceResponse\` envelope:
       post: {
         tags: ["Auth"],
         summary: "Verify email with OTP",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/VerifyEmailInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Email verified + JWT returned" },
           "400": { description: "Invalid or expired token" },
@@ -289,6 +699,16 @@ All feature endpoints return a \`ServiceResponse\` envelope:
       post: {
         tags: ["Auth"],
         summary: "Resend email verification OTP",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/ResendVerificationEmailInput",
+              },
+            },
+          },
+        },
         responses: {
           "200": { description: "Verification email sent" },
         },
@@ -308,11 +728,21 @@ All feature endpoints return a \`ServiceResponse\` envelope:
       post: {
         tags: ["Auth"],
         summary: "Verify TOTP code and log in",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Verify2FaInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Logged in with JWT" },
         },
       },
     },
+
+    // ── Waitlist ────────────────────────────────────────────
     "/api/v1/waitlist": {
       post: {
         tags: ["Waitlist"],
@@ -361,10 +791,20 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+
+    // ── Users ───────────────────────────────────────────────
     "/api/v1/user/signup": {
       post: {
         tags: ["Users"],
         summary: "Sign up",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/SignupInput" },
+            },
+          },
+        },
         responses: {
           "201": { description: "User created" },
           "409": { description: "Email already exists" },
@@ -385,12 +825,44 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         tags: ["Users"],
         summary: "Delete account",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/DeleteAccountInput" },
+            },
+          },
+        },
         responses: {
           "200": { description: "Account deleted" },
           "401": { description: "Wrong password or unauthorized" },
         },
       },
     },
+    "/api/v1/user/check-username": {
+      get: {
+        tags: ["Users"],
+        summary: "Check username availability",
+        parameters: [
+          {
+            name: "username",
+            in: "query",
+            required: true,
+            schema: {
+              type: "string",
+              minLength: 3,
+              maxLength: 30,
+              example: "ada_lovelace",
+            },
+          },
+        ],
+        responses: {
+          "200": { description: "{ isAvailable: boolean }" },
+        },
+      },
+    },
+
+    // ── Profiles ────────────────────────────────────────────
     "/api/v1/user/profile": {
       get: {
         tags: ["Profiles"],
@@ -402,9 +874,81 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         tags: ["Profiles"],
         summary: "Update my profile",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateProfileInput" },
+            },
+          },
+        },
         responses: { "200": { description: "Updated" } },
       },
     },
+    "/api/v1/user/profile/email": {
+      patch: {
+        tags: ["Users"],
+        summary: "Update account email (triggers re-verification)",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateEmailInput" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Verification email sent to new address" },
+        },
+      },
+    },
+    "/api/v1/user/profile/avatar": {
+      patch: {
+        tags: ["Profiles"],
+        summary: "Upload profile avatar",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["avatar"],
+                properties: {
+                  avatar: {
+                    type: "string",
+                    format: "binary",
+                    description: "Image file",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Avatar updated" } },
+      },
+    },
+    "/api/v1/user/{username}": {
+      get: {
+        tags: ["Profiles"],
+        summary: "Get public profile by username",
+        parameters: [
+          {
+            name: "username",
+            in: "path",
+            required: true,
+            schema: { type: "string", example: "ada_lovelace" },
+          },
+        ],
+        responses: {
+          "200": { description: "Public profile + visible links" },
+          "404": { description: "Not found or private" },
+        },
+      },
+    },
+
+    // ── Preferences ─────────────────────────────────────────
     "/api/v1/user/preferences": {
       get: {
         tags: ["Profiles"],
@@ -416,9 +960,86 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         tags: ["Profiles"],
         summary: "Update all display preferences",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdatePreferencesInput" },
+            },
+          },
+        },
         responses: { "200": { description: "Updated" } },
       },
     },
+    "/api/v1/user/preferences/fonts": {
+      put: {
+        tags: ["Profiles"],
+        summary: "Update font preferences",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FontConfigInput" },
+            },
+          },
+        },
+        responses: { "200": { description: "Font preferences updated" } },
+      },
+    },
+    "/api/v1/user/preferences/corners": {
+      put: {
+        tags: ["Profiles"],
+        summary: "Update corner preferences",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CornerConfigInput" },
+            },
+          },
+        },
+        responses: { "200": { description: "Corner preferences updated" } },
+      },
+    },
+    "/api/v1/user/preferences/background": {
+      put: {
+        tags: ["Profiles"],
+        summary: "Update background / wallpaper preferences",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/WallpaperConfigInput" },
+            },
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["type"],
+                properties: {
+                  type: {
+                    type: "string",
+                    example: "image",
+                    description: 'Use "image" when uploading a file',
+                  },
+                  backgroundColor: { type: "string", example: "#ffffff" },
+                  image: {
+                    type: "string",
+                    format: "binary",
+                    description: "Wallpaper image file when type is image",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Background preferences updated" } },
+      },
+    },
+
+    // ── Themes ──────────────────────────────────────────────
     "/api/v1/themes": {
       get: {
         tags: ["Themes"],
@@ -457,7 +1078,7 @@ All feature endpoints return a \`ServiceResponse\` envelope:
               schema: {
                 type: "object",
                 properties: {
-                  name: { type: "string" },
+                  name: { type: "string", example: "Midnight" },
                   "wallpaper_config[image]": {
                     type: "string",
                     format: "binary",
@@ -487,6 +1108,8 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+
+    // ── Links ───────────────────────────────────────────────
     "/api/v1/links": {
       get: {
         tags: ["Links"],
@@ -694,6 +1317,8 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+
+    // ── Public ──────────────────────────────────────────────
     "/api/v1/public/links/{id}/click": {
       post: {
         tags: ["Public"],
