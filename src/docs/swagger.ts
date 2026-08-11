@@ -38,7 +38,7 @@ All feature endpoints return a \`ServiceResponse\` envelope:
     { name: "Links", description: "Link CRUD, reorder, click tracking" },
     { name: "Themes", description: "Display themes" },
     { name: "Waitlist", description: "Waitlist signup" },
-    { name: "Public", description: "Unauthenticated public profile views" },
+    { name: "Public", description: "Unauthenticated public endpoints (click tracking)" },
     { name: "System", description: "Health check and system status" },
   ],
   components: {
@@ -599,6 +599,38 @@ All feature endpoints return a \`ServiceResponse\` envelope:
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/public/links/{id}/click": {
+      post: {
+        tags: ["Public"],
+        summary: "Track a public link click",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Click tracked",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+          "404": {
+            description: "Link not found",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
               },
             },
           },

@@ -12,7 +12,7 @@ import profileRouter from "@/modules/profiles/profile.routes";
 import preferencesRouter from "@/modules/preferences/preferences.routes";
 import waitlistRouter from "@/modules/waitlist/waitlist.routes";
 import linkRouter from "@/modules/links/link.routes";
-import publicRouter from "@/routes/public.router";
+import publicRouter from "@/modules/public/public.routes";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import env from "@/env";

@@ -8,6 +8,7 @@ import {
 } from "@/shared/utils/errors";
 import { SOCIAL_PLATFORMS } from "@/shared/utils/constants";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import cache from "@/lib/cache";
 import type {
   TCreateLink,
   TUpdateLink,
@@ -223,6 +224,11 @@ export const reorder = async (userId: string, data: TReorderLinks) => {
 export const trackClick = async (linkId: string) => {
   const link = await prisma.link.findUnique({
     where: { id: linkId },
+    include: {
+      profile: {
+        select: { username: true },
+      },
+    },
   });
 
   if (!link) {
@@ -235,6 +241,8 @@ export const trackClick = async (linkId: string) => {
       clickCount: { increment: 1 },
     },
   });
+
+  cache.del(`public_profiles:${link.profile.username}`);
 
   return ServiceResponse.success("Click tracked", null);
 };

@@ -68,12 +68,6 @@ export const reorder = catchAsync(async (req: Request, res: Response) => {
   return handleServiceResponse(serviceResponse, res);
 });
 
-export const trackClick = catchAsync(async (req: Request, res: Response) => {
-  const { params } = parseRequest(linkIdParamSchema, req);
-  const serviceResponse = await linkService.trackClick(params.id);
-  return handleServiceResponse(serviceResponse, res);
-});
-
 export const updateLinkIcon = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { params } = parseRequest(linkIdParamSchema, req);
