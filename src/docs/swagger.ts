@@ -224,6 +224,95 @@ All feature endpoints return a \`ServiceResponse\` envelope:
         },
       },
     },
+    "/api/v1/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log in with email and password",
+        responses: {
+          "200": { description: "Logged in (sets access + logged_in cookies)" },
+          "401": { description: "Incorrect email or password" },
+          "403": { description: "Email not verified" },
+        },
+      },
+    },
+    "/api/v1/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log out (clears auth cookies)",
+        responses: {
+          "200": { description: "Logged out" },
+        },
+      },
+    },
+    "/api/v1/auth/forgot-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Request password reset email",
+        responses: {
+          "200": { description: "Reset token emailed" },
+          "404": { description: "Unknown email" },
+        },
+      },
+    },
+    "/api/v1/auth/reset-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Reset password with emailed token",
+        responses: {
+          "200": { description: "Password reset" },
+          "400": { description: "Invalid or expired token" },
+        },
+      },
+    },
+    "/api/v1/auth/update-password": {
+      patch: {
+        tags: ["Auth"],
+        summary: "Change password while authenticated",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": { description: "Password updated" },
+          "401": { description: "Wrong current password or unauthorized" },
+        },
+      },
+    },
+    "/api/v1/auth/verify-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "Verify email with OTP",
+        responses: {
+          "200": { description: "Email verified + JWT returned" },
+          "400": { description: "Invalid or expired token" },
+        },
+      },
+    },
+    "/api/v1/auth/resend-verification-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "Resend email verification OTP",
+        responses: {
+          "200": { description: "Verification email sent" },
+        },
+      },
+    },
+    "/api/v1/auth/2fa/totp/activate": {
+      get: {
+        tags: ["Auth"],
+        summary: "Activate TOTP 2FA",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": { description: "OTP secret + QR code" },
+        },
+      },
+    },
+    "/api/v1/auth/2fa/totp/verify": {
+      post: {
+        tags: ["Auth"],
+        summary: "Verify TOTP code and log in",
+        responses: {
+          "200": { description: "Logged in with JWT" },
+        },
+      },
+    },
     "/api/v1/waitlist": {
       post: {
         tags: ["Waitlist"],

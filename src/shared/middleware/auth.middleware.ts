@@ -1,15 +1,18 @@
 import { promisify } from "util";
-import { logger, prisma } from "@/server";
+import { prisma } from "@/server";
 import AppError from "@/shared/utils/appError";
 import catchAsync from "@/shared/utils/catchAsync";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { AuthenticatedRequest } from "@/shared/types/express";
+import { isTokenBlacklisted } from "@/modules/auth/token-blacklist";
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: any;
+    // Augment Passport's User so req.user has our fields
+    interface User {
+      id: string;
+      [key: string]: unknown;
     }
   }
 }
@@ -41,6 +44,13 @@ export const authenticate = catchAsync(
       token,
       process.env.JWT_SECRET as string,
     )) as jwt.JwtPayload;
+
+    // 2b) Reject tokens revoked on logout
+    if (await isTokenBlacklisted(token)) {
+      return next(
+        new AppError("Token is no longer valid. Please log in again.", 401),
+      );
+    }
 
     // 3) Check if user still exists
     const currentUser = await prisma.user.findUnique({

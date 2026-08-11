@@ -1,32 +1,15 @@
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { TCreateUser, TUpdateUser } from "./user.schemas";
-import type { TLogin } from "@/schemas/auth.schema";
-import env from "@/env";
 import { logger } from "@/server";
 import { prisma } from "@/shared/config/database";
-import { UserWithProfile, LoginResult } from "@/shared/types";
+import { UserWithProfile } from "@/shared/types";
 import { User } from "@prisma/client";
 import { AppError } from "@/shared/utils/appError";
 import { customAlphabet } from "nanoid";
 import Email from "@/shared/utils/email";
-import QRCode from "qrcode";
-
-import { verify } from "@otplib/totp";
-import { crypto as tCrypto } from "@otplib/plugin-crypto-node";
-import { base32 } from "@otplib/plugin-base32-scure";
-import { generateTOTP } from "@otplib/uri";
-import { generateRandomBase32 } from "@/shared/utils/uniqueId";
-import { decrypt, encrypt } from "@/shared/utils/encrpyt";
-
-const signToken = (id: string): string => {
-  const secret = env.JWT_SECRET;
-  const expiresIn = env.JWT_EXPIRES_IN;
-  return jwt.sign({ id }, secret, { expiresIn } as any);
-};
 
 export const generateOTP = async () => {
   const alphabet = "0123456789";
@@ -153,149 +136,6 @@ export const deleteUser = async (id: string): Promise<ServiceResponse<null>> => 
   );
 };
 
-export const login = async (
-  user: TLogin
-): Promise<ServiceResponse<LoginResult | null>> => {
-  const foundUser = await prisma.user.findUnique({
-    where: { email: user.email },
-  });
-
-  console.log("Found user:", foundUser);
-
-  if (!foundUser) {
-    return ServiceResponse.failure<LoginResult | null>(
-      "Incorrect email or password",
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (!foundUser.password) {
-    return ServiceResponse.failure<LoginResult | null>(
-      "User account has no password set",
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (!(await comparePassword(user.password, foundUser.password))) {
-    return ServiceResponse.failure<LoginResult | null>(
-      "Incorrect email or password",
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  if (foundUser.totp_secret != null) {
-    return ServiceResponse.success("", {
-      action: "2fa",
-    });
-  }
-
-  const token = signToken(foundUser.id);
-
-  return ServiceResponse.success("Logged in successfully", {
-    user: foundUser,
-    token,
-  });
-};
-
-export const verifyEmail = async (
-  token: string
-): Promise<ServiceResponse<LoginResult>> => {
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-  const user = await prisma.user.findFirst({
-    where: {
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: {
-        gt: new Date(),
-      },
-    },
-    include: { profile: true },
-  });
-
-  if (!user) {
-    throw new AppError(
-      "Token is invalid or has expired",
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  const verifiedUser = await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      isEmailVerified: true,
-      emailVerificationToken: null,
-      emailVerificationExpires: null,
-    },
-    include: { profile: true },
-  });
-
-  const bearerToken = signToken(verifiedUser.id);
-
-  return ServiceResponse.success(
-    "Email verified successfully",
-    {
-      user: verifiedUser,
-      token: bearerToken,
-    },
-    StatusCodes.OK
-  );
-};
-
-export const resendVerificationEmail = async (
-  email: string
-): Promise<ServiceResponse<null>> => {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: { profile: true },
-  });
-
-  if (!user) {
-    throw new AppError("No user found with this email", StatusCodes.NOT_FOUND);
-  }
-
-  if (user.isEmailVerified) {
-    throw new AppError("Email is already verified", StatusCodes.BAD_REQUEST);
-  }
-
-  const verificationOTP = await generateOTP();
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(verificationOTP)
-    .digest("hex");
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  });
-
-  try {
-    await new Email(user, verificationOTP).sendEmailVerification();
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-    throw new AppError(
-      "Failed to send verification email. Please try again later.",
-      StatusCodes.INTERNAL_SERVER_ERROR
-    );
-  }
-
-  return ServiceResponse.success(
-    "Verification email sent successfully",
-    null,
-    StatusCodes.OK
-  );
-};
-
-export const oauthLogin = async (user: User) => {
-  const token = signToken(user.id);
-  return ServiceResponse.success("Login successful", { token, user }, 200);
-};
-
 export const updateEmail = async (
   user: User,
   email: string
@@ -317,116 +157,33 @@ export const updateEmail = async (
       },
     });
 
-    return await resendVerificationEmail(email);
+    const updatedUser = await prisma.user.findUnique({
+      where: { email },
+      include: { profile: true },
+    });
+
+    await new Email(updatedUser!, verificationOTP).sendEmailVerification();
+
+    return ServiceResponse.success(
+      "Verification email sent successfully",
+      null,
+      StatusCodes.OK
+    );
   } catch (error) {
     logger.error(error);
     return ServiceResponse.failure("An error occurred", null, 500);
   }
 };
 
-export const setup2Fa = async (user: UserWithProfile, _type: string = "totp") => {
-  if (!user.profile)
-    return ServiceResponse.failure("User onboarding incomplete", null, 419);
-
-  if (user.totp_secret != null && user.totp_secret.length >= 1)
-    return ServiceResponse.failure("Existing 2FA found", 403);
-
-  const secret = generateRandomBase32();
-  const hashedsecret = encrypt(secret);
-
-  await prisma.user.update({
-    where: {
-      id: user.id,
-    },
-    data: {
-      totp_secret: hashedsecret,
-    },
-  });
-
-  const url = generateTOTP({
-    issuer: "abio.site",
-    secret,
-    label: "Abio",
-    period: 30,
-    algorithm: "sha1",
-  });
-
-  return ServiceResponse.success(
-    "OTP configured",
-    {
-      secret,
-      url,
-      qrcode: await QRCode.toDataURL(url, {
-        version: 6,
-        errorCorrectionLevel: "medium",
-      }),
-    },
-    200
-  );
-};
-
-export const verify2FAOtp = async (email: string, code: string) => {
-  const user = await prisma.user.findFirst({
-    where: {
-      email,
-    },
-    include: {
-      profile: true,
-      roles: true,
-    },
-  });
-
-  if (!user) {
-    return ServiceResponse.failure("User not found.", null, 400);
-  }
-
-  if (!user.totp_secret)
-    return ServiceResponse.failure(
-      "User does not have 2FA configured.",
-      null,
-      419
-    );
-
-  const secret = decrypt(user.totp_secret!);
-
-  const result = await verify({
-    secret,
-    token: code,
-    crypto: tCrypto,
-    algorithm: "sha1",
-    digits: 6,
-    period: 30,
-    epochTolerance: 5,
-    base32,
-  });
-
-  if (!result.valid) {
-    return ServiceResponse.failure("OTP Verification failed", null);
-  }
-
-  const token = signToken(user.id);
-
-  return ServiceResponse.success("Logged in successfully", {
-    user: user,
-    token,
-  });
-};
-
-/** Namespace object for existing `userService.method()` call sites (auth, etc.). */
+/** Namespace object for existing `userService.method()` call sites. */
 export const userService = {
   create,
   findById,
   findByEmail,
   update,
   delete: deleteUser,
-  login,
   comparePassword,
   hashPassword,
   generateOTP,
-  verifyEmail,
-  resendVerificationEmail,
-  oauthLogin,
   updateEmail,
-  setup2Fa,
-  verify2FAOtp,
 };

@@ -6,7 +6,7 @@ import path from "path";
 import globalErrorHandler, {
 	unexpectedRequest,
 } from "@/shared/middleware/errorHandler";
-import authRouter from "@/routes/auth.router";
+import authRouter from "@/modules/auth/auth.routes";
 import userRouter from "@/modules/users/user.routes";
 import profileRouter from "@/modules/profiles/profile.routes";
 import preferencesRouter from "@/modules/preferences/preferences.routes";
@@ -18,7 +18,7 @@ import cookieParser from "cookie-parser";
 import env from "@/env";
 import { prisma } from "@/lib/prisma";
 import logger from "@/shared/config/logger";
-import setupPassport from "@/service/passport";
+import setupPassport from "@/modules/auth/passport";
 import passport from "passport";
 import themesRouter from "@/modules/themes/themes.routes";
 import { requestLogger } from "@/shared/middleware/requestLogger";

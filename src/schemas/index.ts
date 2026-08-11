@@ -23,7 +23,8 @@ export {
   updatePasswordSchema,
   verifyEmailSchema,
   resendVerificationEmailSchema,
-} from "./auth.schema";
+  verify2FaSchema,
+} from "@/modules/auth/auth.schemas";
 export type {
   TLogin,
   TForgotPassword,
@@ -31,9 +32,9 @@ export type {
   TUpdatePassword,
   TVerifyEmail,
   TResendVerificationEmail,
-} from "./auth.schema";
+  TVerify2Fa,
+} from "@/modules/auth/auth.schemas";
 
-// Re-export from modules for gradual migration of remaining importers
 export {
   createUserSchema,
   updateUserSchema,
