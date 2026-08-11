@@ -1,4 +1,4 @@
-import { AuthenticatedRequest } from "@/types/express";
+import { AuthenticatedRequest } from "@/shared/types/express";
 import { TUpdateProfile, TCheckUsername, TUpdateFont, TUpdateCorners, TUpdateBackground, TUpdatePreferences } from "@/schemas/profile.schema";
 
 export interface UpdateProfileRequest extends AuthenticatedRequest {
@@ -15,6 +15,6 @@ export interface GetPublicProfileRequest {
 	};
 }
 
-export interface UpdatePreferencesRequest {
-	body: TUpdatePreferences,
+export interface UpdatePreferencesRequest extends AuthenticatedRequest {
+	body: TUpdatePreferences;
 }

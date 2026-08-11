@@ -9,15 +9,15 @@ import type {
 	TResendVerificationEmail,
 } from "@/schemas/index";
 import { userService } from "@/service/user.service";
-import AppError from "@/utils/appError";
-import catchAsync from "@/utils/catchAsync";
-import Email from "@/utils/email";
-import { handleServiceResponse } from "@/utils/httpHandlers";
+import AppError from "@/shared/utils/appError";
+import catchAsync from "@/shared/utils/catchAsync";
+import Email from "@/shared/utils/email";
+import { handleServiceResponse } from "@/shared/utils/httpHandlers";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import env from "@/env";
-import { generateUniqueId } from "@/utils/uniqueId";
+import { generateUniqueId } from "@/shared/utils/uniqueId";
 import { TVerify2Fa } from "@/schemas/auth.schema";
 // import { TDeleteAccount, TVerify2Fa } from "@/schemas/auth.schema";
 

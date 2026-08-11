@@ -1,5 +1,5 @@
 import UserController from "@/controllers/user.controller";
-import { authenticate, hasProfile } from "@/middleware/auth.middleware";
+import { authenticate, hasProfile } from "@/shared/middleware/auth.middleware";
 import {
 	UUIDSchema,
 	updateProfileSchema,
@@ -12,8 +12,8 @@ import {
 	updateEmailSchema,
 } from "@/schemas/user.schema";
 import ProfileController from "../controllers/profile.controller";
-import { validateRequest } from "@/utils/httpHandlers";
-import { uploadImage } from "@/middleware/upload.middleware";
+import { validateRequest } from "@/shared/utils/httpHandlers";
+import { uploadImage } from "@/shared/middleware/upload.middleware";
 import express, { type Router } from "express";
 import { updateBackgroundSchema, updateCornersSchema, updateFontSchema, updatePreferencesSchema } from "@/schemas/profile.schema";
 

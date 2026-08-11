@@ -1,6 +1,6 @@
 import WaitlistController from "@/controllers/waitlist.controller";
 import { createWaitlistSchema } from "@/schemas/waitlist.schema";
-import { validateRequest } from "@/utils/httpHandlers";
+import { validateRequest } from "@/shared/utils/httpHandlers";
 import express, { type Router } from "express";
 
 export const waitlistRouter: Router = express.Router();

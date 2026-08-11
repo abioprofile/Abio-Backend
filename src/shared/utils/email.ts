@@ -1,8 +1,8 @@
-import { UserWithProfile } from "@/types";
+import { UserWithProfile } from "@/shared/types";
 
 import { convert } from "html-to-text";
 import nodemailer from "nodemailer";
-import { ORGANIZATION_NAME } from "@/utils/constants";
+import { ORGANIZATION_NAME } from "@/shared/utils/constants";
 
 export default class Email {
   private to: string;

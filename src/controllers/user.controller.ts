@@ -4,13 +4,13 @@ import type {
   TDeleteAccount,
 } from "@/schemas/user.schema";
 import { userService } from "@/service/user.service";
-import catchAsync from "@/utils/catchAsync";
-import { AuthenticatedRequest } from "@/types/express";
-import { handleServiceResponse } from "@/utils/httpHandlers";
+import catchAsync from "@/shared/utils/catchAsync";
+import { AuthenticatedRequest } from "@/shared/types/express";
+import { handleServiceResponse } from "@/shared/utils/httpHandlers";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import AppError from "@/utils/appError";
+import AppError from "@/shared/utils/appError";
 import { StatusCodes } from "http-status-codes";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 
 class UserController {
   public createUser: RequestHandler = catchAsync(

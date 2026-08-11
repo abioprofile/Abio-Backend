@@ -1,6 +1,6 @@
 import { logger } from "@/server";
-import AppError from "@/utils/appError";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import AppError from "@/shared/utils/appError";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";

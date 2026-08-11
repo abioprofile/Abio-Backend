@@ -1,9 +1,9 @@
 import { prisma } from "@/server";
 import { TUpdateProfile } from "@/schemas/profile.schema";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
-import { AppError } from "@/utils/appError";
-import { uploadToCloudinary } from "@/utils/cloudinary";
+import { AppError } from "@/shared/utils/appError";
+import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 import cache from "@/lib/cache";
 
 export class ProfileService {

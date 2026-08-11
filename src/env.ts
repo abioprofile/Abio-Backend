@@ -7,8 +7,11 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
   HOST: z.string(),
   BACKEND_URL: z.string().url(),
-  NODE_ENV: z.enum(["development", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   DATABASE_URL: z.string().url(),
+  TEST_DATABASE_URL: z.string().url().optional(),
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: z.string(),
   CLOUDINARY_API_KEY: z.string(),
@@ -34,6 +37,7 @@ const envSchema = z.object({
   GOOGLE_OAUTH_CALLBACK_URL: z.string(),
   REDIS_URL: z.string().url(),
   TOTP_SECRET: z.string(),
+  LOG_LEVEL: z.string().default("info")
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

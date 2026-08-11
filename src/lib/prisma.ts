@@ -1,7 +1,13 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import logger from "@/shared/config/logger";
 
-const prisma = new PrismaClient({
+const prismaClient = new PrismaClient({
+  log: [
+    { level: "query", emit: "event" },
+    { level: "error", emit: "stdout" },
+    { level: "warn", emit: "stdout" },
+  ],
   omit: {
     user: {
       password: true,
@@ -13,7 +19,23 @@ const prisma = new PrismaClient({
       userId: true,
     },
   },
-}).$extends({
+});
+
+// Flag anything over 100ms
+prismaClient.$on("query", (e) => {
+  if (e.duration > 100) {
+    logger.warn(
+      {
+        query: e.query,
+        duration: `${e.duration}ms`,
+        params: e.params,
+      },
+      "Slow query detected"
+    );
+  }
+});
+
+const prisma = prismaClient.$extends({
   query: {
     user: {
       async create({ args, query }) {

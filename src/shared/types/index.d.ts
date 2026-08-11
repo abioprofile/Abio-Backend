@@ -1,16 +1,10 @@
-import { PrismaClient, Prisma, Habit } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 // Prisma transaction types
 export type PrismaTransaction = Omit<
   PrismaClient,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
-
-// Profile creation payload type
-export interface ProfileCreatePayload {
-  userId: string;
-  selectedHabits: Habit[];
-}
 
 // User service result type - using Prisma's generated types
 export type UserWithProfile = Prisma.UserGetPayload<{
@@ -30,17 +24,6 @@ export interface LoginResult {
   token?: string;
   action?: string;
 }
-
-// Re-export device types
-export type {
-  CreateDeviceRequest,
-  UpdateDeviceRequest,
-  DeleteDeviceRequest,
-  GetDeviceRequest,
-} from "./device";
-
-// Re-export browser history types
-export type { CategorizeRequest } from "./browserHistory";
 
 // Re-export profile types
 export type {

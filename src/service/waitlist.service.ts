@@ -1,8 +1,8 @@
 import { prisma } from "@/server";
 import { TCreateWaitlist } from "@/schemas/waitlist.schema";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
-import Email from "@/utils/email";
+import Email from "@/shared/utils/email";
 
 export class WaitlistService {
   async create(data: TCreateWaitlist) {

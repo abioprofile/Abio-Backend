@@ -1,9 +1,9 @@
 import ThemeController from "@/controllers/themes.controller";
-import { authenticate, hasRole } from "@/middleware/auth.middleware";
-import { uploadImage } from "@/middleware/upload.middleware";
+import { authenticate, hasRole } from "@/shared/middleware/auth.middleware";
+import { uploadImage } from "@/shared/middleware/upload.middleware";
 import { createThemeSchema } from "@/schemas/profile.schema";
-import catchAsync from "@/utils/catchAsync";
-import { validateRequest } from "@/utils/httpHandlers";
+import catchAsync from "@/shared/utils/catchAsync";
+import { validateRequest } from "@/shared/utils/httpHandlers";
 import { Router } from "express";
 
 export default function themesRouter(): Router {

@@ -1,4 +1,4 @@
-import { AuthenticatedRequest } from "@/types/express";
+import { AuthenticatedRequest } from "@/shared/types/express";
 import { TCreateLink, TUpdateLink, TReorderLinks } from "@/schemas/link.schema";
 
 export interface CreateLinkRequest extends AuthenticatedRequest {

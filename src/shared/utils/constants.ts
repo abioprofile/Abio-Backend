@@ -26,4 +26,7 @@ export const SOCIAL_PLATFORMS = {
   },
   TWITCH: { name: "Twitch", icon: "twitch", urlPattern: /twitch\.tv/ },
   SPOTIFY: { name: "Spotify", icon: "spotify", urlPattern: /spotify\.com/ },
+  REDDIT: { name: "Reddit", icon: "reddit", urlPattern: /reddit\.com/ },
+  PINTEREST: { name: "Pinterest", icon: "pinterest", urlPattern: /pinterest\.com/ },
+  MEDIUM: { name: "Medium", icon: "medium", urlPattern: /medium\.com/ },
 } as const;

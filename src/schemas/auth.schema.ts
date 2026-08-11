@@ -1,5 +1,5 @@
 import z from "zod";
-import { PASSWORD_COMPLEXITY_REGEX } from "@/utils/constants";
+import { PASSWORD_COMPLEXITY_REGEX } from "@/shared/utils/constants";
 
 export const loginSchema = z.object({
 	body: z.object({

@@ -1,18 +1,18 @@
 import { profileService } from "@/service/profile.service";
-import catchAsync from "@/utils/catchAsync";
-import { handleServiceResponse } from "@/utils/httpHandlers";
+import catchAsync from "@/shared/utils/catchAsync";
+import { handleServiceResponse } from "@/shared/utils/httpHandlers";
 import type { Response, NextFunction, RequestHandler } from "express";
-import { AuthenticatedRequest } from "@/types/express";
+import { AuthenticatedRequest } from "@/shared/types/express";
 import type {
 	UpdateProfileRequest,
 	CheckUsernameRequest,
 	GetPublicProfileRequest,
-} from "@/types";
-import AppError from "@/utils/appError";
+} from "@/shared/types";
+import AppError from "@/shared/utils/appError";
 import preferencesService from "@/service/preferences.service";
-import { uploadToCloudinary } from "@/utils/cloudinary";
-import { ServiceResponse } from "@/utils/serviceResponse";
-import { UpdatePreferencesRequest } from "@/types/profile";
+import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
+import { UpdatePreferencesRequest } from "@/shared/types/profile";
 
 class ProfileController {
 	public getMyProfile: RequestHandler = catchAsync(

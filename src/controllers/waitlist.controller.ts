@@ -1,6 +1,6 @@
 import { waitlistService } from "@/service/waitlist.service";
-import catchAsync from "@/utils/catchAsync";
-import { handleServiceResponse } from "@/utils/httpHandlers";
+import catchAsync from "@/shared/utils/catchAsync";
+import { handleServiceResponse } from "@/shared/utils/httpHandlers";
 import type { Response, NextFunction, Request, RequestHandler } from "express";
 
 class WaitlistController {

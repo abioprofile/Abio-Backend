@@ -1,16 +1,14 @@
 import z from "zod";
-import { SOCIAL_PLATFORMS } from "@/utils/constants";
+import { SOCIAL_PLATFORMS } from "@/shared/utils/constants";
+import type { AuthenticatedRequest } from "@/shared/types/express";
 
 const urlRegex = /^https?:\/\/.+/;
 
-// Helper function to check if URL matches known social platforms
-const detectPlatform = (url: string): string | null => {
-  for (const [key, platform] of Object.entries(SOCIAL_PLATFORMS)) {
-    if (platform.urlPattern.test(url)) {
-      return key.toLowerCase();
-    }
-  }
-  return null;
+/** Schema-only helper (truthy check); service uses uppercase keys for storage. */
+const isKnownSocialUrl = (url: string): boolean => {
+  return Object.values(SOCIAL_PLATFORMS).some((platform) =>
+    platform.urlPattern.test(url)
+  );
 };
 
 export const createLinkSchema = z.object({
@@ -38,12 +36,9 @@ export const createLinkSchema = z.object({
     })
     .refine(
       (data) => {
-        // If URL matches a known social platform, platform is optional
-        const detectedPlatform = detectPlatform(data.url);
-        if (detectedPlatform) {
+        if (isKnownSocialUrl(data.url)) {
           return true;
         }
-        // If URL doesn't match any known platform, platform must be provided
         return !!data.platform;
       },
       {
@@ -70,10 +65,8 @@ export const updateLinkSchema = z.object({
     .partial()
     .refine(
       (data) => {
-        // If URL is being updated, check platform requirement
         if (data.url) {
-          const detectedPlatform = detectPlatform(data.url);
-          if (!detectedPlatform && !data.platform) {
+          if (!isKnownSocialUrl(data.url) && !data.platform) {
             return false;
           }
         }
@@ -98,6 +91,44 @@ export const reorderLinksSchema = z.object({
   }),
 });
 
+export const linkIdParamSchema = z.object({
+  params: z.object({
+    id: z
+      .string({ required_error: "Object ID is required" })
+      .uuid("Invalid UUID"),
+  }),
+});
+
 export type TCreateLink = z.infer<typeof createLinkSchema.shape.body>;
 export type TUpdateLink = z.infer<typeof updateLinkSchema.shape.body>;
 export type TReorderLinks = z.infer<typeof reorderLinksSchema.shape.body>;
+
+export interface CreateLinkRequest extends AuthenticatedRequest {
+  body: TCreateLink;
+}
+
+export interface GetLinkRequest extends AuthenticatedRequest {
+  params: { id: string };
+}
+
+export interface UpdateLinkRequest extends AuthenticatedRequest {
+  params: { id: string };
+  body: TUpdateLink;
+}
+
+export interface DeleteLinkRequest extends AuthenticatedRequest {
+  params: { id: string };
+}
+
+export interface ReorderLinksRequest extends AuthenticatedRequest {
+  body: TReorderLinks;
+}
+
+export interface TrackLinkClickRequest {
+  params: { id: string };
+}
+
+export interface UpdateLinkIconRequest extends AuthenticatedRequest {
+  params: { id: string };
+  file?: Express.Multer.File;
+}

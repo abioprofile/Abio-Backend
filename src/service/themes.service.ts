@@ -1,6 +1,6 @@
 import { TCreateTheme } from "@/schemas/profile.schema";
 import { prisma } from "@/server";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 
 class ThemeService {
   constructor() {}

@@ -1,4 +1,4 @@
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -6,19 +6,19 @@ import crypto from "crypto";
 import { TLogin, TCreateUser, TUpdateUser } from "@/schemas/index";
 import env from "@/env";
 import { logger, prisma } from "@/server";
-import { UserWithProfile, LoginResult } from "@/types";
+import { UserWithProfile, LoginResult } from "@/shared/types";
 import { User } from "@prisma/client";
-import { AppError } from "@/utils/appError";
+import { AppError } from "@/shared/utils/appError";
 import { customAlphabet, nanoid } from "nanoid";
-import Email from "@/utils/email";
+import Email from "@/shared/utils/email";
 import QRCode from "qrcode";
 
 import { generate, verify } from "@otplib/totp";
 import { crypto as tCrypto } from "@otplib/plugin-crypto-node";
 import { base32 } from "@otplib/plugin-base32-scure";
 import { generateTOTP } from "@otplib/uri";
-import { generateRandomBase32 } from "@/utils/uniqueId";
-import { decrypt, encrypt } from "@/utils/encrpyt";
+import { generateRandomBase32 } from "@/shared/utils/uniqueId";
+import { decrypt, encrypt } from "@/shared/utils/encrpyt";
 
 const signToken = (id: string): string => {
   const secret = env.JWT_SECRET;

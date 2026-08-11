@@ -1,27 +1,27 @@
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
-import { pino } from "pino";
 import path from "path";
 
 import globalErrorHandler, {
 	unexpectedRequest,
-} from "@/middleware/errorHandler";
+} from "@/shared/middleware/errorHandler";
 import authRouter from "@/routes/auth.router";
 import userRouter from "@/routes/user.router";
 import waitlistRouter from "@/routes/waitlist.router";
-import linkRouter from "@/routes/link.router";
+import linkRouter from "@/modules/links/link.routes";
 import publicRouter from "@/routes/public.router";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import env from "@/env";
 import { prisma } from "@/lib/prisma";
-
+import logger from "@/shared/config/logger";
 import setupPassport from "@/service/passport";
 import passport from "passport";
 import themesRouter from "@/routes/themes.router";
+import { requestLogger } from "@/shared/middleware/requestLogger";
+import { setupSwagger } from "@/docs/swagger";
 
-const logger = pino({ name: "server start" });
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -39,6 +39,7 @@ app.set("views", path.join(process.cwd(), "views"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(requestLogger as any);
 app.use(
 	cors({
 		origin: env.CORS_ORIGINS,
@@ -63,6 +64,16 @@ app.use("/api/v1", router);
 
 // My pattern for initiating routers
 app.use("/api/v1/themes", themesRouter());
+
+app.get("/health", (_req, res) => {
+	res.json({
+		status: "ok",
+		environment: env.NODE_ENV,
+		timestamp: new Date().toISOString(),
+	})
+})
+
+setupSwagger(app);
 
 // Error handlers
 app.use(unexpectedRequest);

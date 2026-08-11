@@ -6,7 +6,7 @@ import {
 } from "@/schemas/profile.schema";
 import { prisma } from "@/server";
 import { profileService } from "@/service/profile.service";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { DisplayPreference } from "@prisma/client";
 import { StatusCodes } from "http-status-codes";
 

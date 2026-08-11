@@ -1,10 +1,10 @@
 import { promisify } from "util";
 import { logger, prisma } from "@/server";
-import AppError from "@/utils/appError";
-import catchAsync from "@/utils/catchAsync";
+import AppError from "@/shared/utils/appError";
+import catchAsync from "@/shared/utils/catchAsync";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { AuthenticatedRequest } from "@/types/express";
+import { AuthenticatedRequest } from "@/shared/types/express";
 
 declare global {
   namespace Express {

@@ -1,8 +1,8 @@
 import themesService from "@/service/themes.service";
-import { AuthenticatedRequest } from "@/types/express";
-import catchAsync from "@/utils/catchAsync";
-import { handleServiceResponse } from "@/utils/httpHandlers";
-import { ServiceResponse } from "@/utils/serviceResponse";
+import { AuthenticatedRequest } from "@/shared/types/express";
+import catchAsync from "@/shared/utils/catchAsync";
+import { handleServiceResponse } from "@/shared/utils/httpHandlers";
+import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { RequestHandler, Response } from "express";
 
 export default class ThemeController {

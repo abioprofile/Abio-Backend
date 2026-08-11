@@ -1,5 +1,5 @@
 import AuthController from "@/controllers/auth.controller";
-import { authenticate } from "@/middleware/auth.middleware";
+import { authenticate } from "@/shared/middleware/auth.middleware";
 import { verify2FaSchema } from "@/schemas/auth.schema";
 // import { deleteAccountSchema } from "@/schemas/auth.schema";
 import {
@@ -10,7 +10,7 @@ import {
   verifyEmailSchema,
   resendVerificationEmailSchema,
 } from "@/schemas/index";
-import { validateRequest } from "@/utils/httpHandlers";
+import { validateRequest } from "@/shared/utils/httpHandlers";
 import express, { type Router } from "express";
 import passport from "passport";
 
