@@ -138,6 +138,28 @@ All feature endpoints return a \`ServiceResponse\` envelope:
           },
         },
       },
+      CreateWaitlistInput: {
+        type: "object",
+        required: ["name", "email"],
+        properties: {
+          name: { type: "string", example: "Ada Lovelace" },
+          email: {
+            type: "string",
+            format: "email",
+            example: "ada@example.com",
+          },
+        },
+      },
+      WaitlistEntry: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string", example: "Ada Lovelace" },
+          email: { type: "string", format: "email" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
     },
   },
   paths: {
@@ -163,6 +185,54 @@ All feature endpoints return a \`ServiceResponse\` envelope:
                     },
                   },
                 },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/waitlist": {
+      post: {
+        tags: ["Waitlist"],
+        summary: "Join the waitlist",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateWaitlistInput" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Joined waitlist",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ServiceResponse" },
+              },
+            },
+          },
+          "409": {
+            description: "Email already on waitlist",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/waitlist/jzI27AUJTCKU": {
+      get: {
+        tags: ["Waitlist"],
+        summary: "List waitlist entries (obscured admin path)",
+        responses: {
+          "200": {
+            description: "Waitlist entries",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ServiceResponse" },
               },
             },
           },

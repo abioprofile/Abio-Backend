@@ -8,7 +8,7 @@ import globalErrorHandler, {
 } from "@/shared/middleware/errorHandler";
 import authRouter from "@/routes/auth.router";
 import userRouter from "@/routes/user.router";
-import waitlistRouter from "@/routes/waitlist.router";
+import waitlistRouter from "@/modules/waitlist/waitlist.routes";
 import linkRouter from "@/modules/links/link.routes";
 import publicRouter from "@/routes/public.router";
 import morgan from "morgan";

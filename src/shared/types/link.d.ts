@@ -1,5 +1,5 @@
 import { AuthenticatedRequest } from "@/shared/types/express";
-import { TCreateLink, TUpdateLink, TReorderLinks } from "@/schemas/link.schema";
+import { TCreateLink, TUpdateLink, TReorderLinks } from "@/modules/links/link.schemas";
 
 export interface CreateLinkRequest extends AuthenticatedRequest {
   body: TCreateLink;

@@ -39,6 +39,3 @@ export type { TCreateUser, TUpdateUser } from "./user.schema";
 
 export { updateProfileSchema, checkUsernameSchema } from "./profile.schema";
 export type { TUpdateProfile, TCheckUsername } from "./profile.schema";
-
-export { createWaitlistSchema } from "./waitlist.schema";
-export type { TCreateWaitlist } from "./waitlist.schema";
