@@ -43,7 +43,14 @@ export const authenticate = catchAsync(
     const decoded = (await promisify<any>(jwt.verify as any)(
       token,
       process.env.JWT_SECRET as string,
-    )) as jwt.JwtPayload;
+    )) as jwt.JwtPayload & { id?: string; typ?: string };
+
+    // Only short-lived access JWTs may authorize API calls (never refresh).
+    if (decoded.typ !== "access" || typeof decoded.id !== "string") {
+      return next(
+        new AppError("Invalid access token. Please log in again.", 401),
+      );
+    }
 
     // 2b) Reject tokens revoked on logout
     if (await isTokenBlacklisted(token)) {

@@ -120,10 +120,11 @@ In production, passwords must be at least 8 characters and include a letter, a n
         properties: {
           token: {
             type: "string",
-            minLength: 6,
-            maxLength: 6,
-            example: "123456",
-            description: "6-character reset OTP from email",
+            minLength: 32,
+            maxLength: 128,
+            example: "a1b2c3d4e5f6789012345678901234567890abcd",
+            description:
+              "Raw reset token from the link (${CLIENT_URL}/auth/reset-password/<token>). Not an OTP.",
           },
           password: {
             type: "string",
@@ -138,7 +139,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         example: {
-          token: "123456",
+          token: "a1b2c3d4e5f6789012345678901234567890abcd",
           password: "Passw0rd!",
           passwordConfirm: "Passw0rd!",
         },
@@ -178,13 +179,25 @@ In production, passwords must be at least 8 characters and include a letter, a n
         properties: {
           token: {
             type: "string",
-            minLength: 6,
-            maxLength: 6,
-            example: "654321",
-            description: "6-digit email verification OTP",
+            minLength: 32,
+            maxLength: 128,
+            example: "a1b2c3d4e5f6...",
+            description:
+              "Raw email verification token from the link (${CLIENT_URL}/auth/<token>). Not an OTP.",
           },
         },
-        example: { token: "654321" },
+        example: { token: "a1b2c3d4e5f6789012345678901234567890abcd" },
+      },
+      RefreshTokenInput: {
+        type: "object",
+        properties: {
+          refreshToken: {
+            type: "string",
+            description:
+              "Opaque refresh token. Optional if the httpOnly `refresh` cookie is present.",
+          },
+        },
+        example: { refreshToken: "opaque-refresh-token-hex" },
       },
       ResendVerificationEmailInput: {
         type: "object",
@@ -604,7 +617,10 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         responses: {
-          "201": { description: "User created — check email to verify" },
+          "201": {
+            description:
+              "User created — check email to verify. Body: { success, message, data: null, statusCode }",
+          },
           "409": { description: "Email already exists" },
         },
       },
@@ -622,19 +638,42 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         responses: {
-          "200": { description: "Logged in (sets access + logged_in cookies)" },
+          "200": {
+            description:
+              "Logged in (sets access + refresh + logged_in cookies; body includes accessToken + refreshToken)",
+          },
           "401": { description: "Incorrect email or password" },
           "403": { description: "Email not verified" },
           "429": { description: "Too many login attempts" },
         },
       },
     },
+    "/api/v1/auth/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Rotate refresh token and issue a new access token",
+        description:
+          "Send `refreshToken` in the body or the httpOnly `refresh` cookie. Old refresh token is invalidated (rotation).",
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RefreshTokenInput" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "New access + refresh tokens" },
+          "401": { description: "Invalid or expired refresh token" },
+        },
+      },
+    },
     "/api/v1/auth/logout": {
       post: {
         tags: ["Auth"],
-        summary: "Log out (clears auth cookies + blacklists JWT)",
+        summary: "Log out (clears cookies, blacklists access JWT, revokes refresh)",
         description:
-          "Optional: send Bearer token or access cookie so the JWT is blacklisted in Redis immediately.",
+          "Optional: send Bearer/access cookie to blacklist the JWT, and refresh body/cookie to revoke the refresh row.",
         responses: {
           "200": { description: "Logged out" },
         },
@@ -653,7 +692,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         responses: {
-          "200": { description: "Reset token emailed" },
+          "200": { description: "Reset link emailed" },
           "404": { description: "Unknown email" },
         },
       },
@@ -661,7 +700,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
     "/api/v1/auth/reset-password": {
       post: {
         tags: ["Auth"],
-        summary: "Reset password with emailed token",
+        summary: "Reset password with emailed link token",
+        description:
+          "Frontend route `/auth/reset-password/:token` extracts the token and POSTs it here with the new password.",
         requestBody: {
           required: true,
           content: {
@@ -698,7 +739,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
     "/api/v1/auth/verify-email": {
       post: {
         tags: ["Auth"],
-        summary: "Verify email with OTP",
+        summary: "Verify email with link token",
+        description:
+          "Frontend route `/auth/:token` extracts the token and POSTs it here. On success, issues access + refresh and queues the welcome email.",
         requestBody: {
           required: true,
           content: {
@@ -708,7 +751,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         responses: {
-          "200": { description: "Email verified + JWT returned" },
+          "200": {
+            description: "Email verified + access/refresh tokens returned",
+          },
           "400": { description: "Invalid or expired token" },
         },
       },
@@ -716,7 +761,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     "/api/v1/auth/resend-verification-email": {
       post: {
         tags: ["Auth"],
-        summary: "Resend email verification OTP",
+        summary: "Resend email verification link",
         requestBody: {
           required: true,
           content: {

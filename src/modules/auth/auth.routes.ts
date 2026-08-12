@@ -9,6 +9,7 @@ const authRouter: Router = express.Router();
 
 authRouter.post("/signup", authController.signup);
 authRouter.post("/login", loginRateLimiter, authController.login);
+authRouter.post("/refresh", authController.refresh);
 
 authRouter.get(
   "/google",

@@ -22,8 +22,11 @@ const envSchema = z.object({
     .pipe(z.array(z.string())),
   COOKIE_DOMAIN: z.string(),
   JWT_SECRET: z.string(),
-  JWT_EXPIRES_IN: z.string().default("90d"),
-  JWT_COOKIE_EXPIRES_IN: z.string().default("90"),
+  /** @deprecated use JWT_ACCESS_EXPIRES_IN — kept for older envs */
+  JWT_EXPIRES_IN: z.string().optional(),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  JWT_COOKIE_EXPIRES_IN: z.string().default("7"),
   EMAIL_FROM: z.string().email(),
   EMAIL_FROM_NAME: z.string(),
   SMTP_HOST: z.string(),
@@ -47,5 +50,12 @@ if (!parsedEnv.success) {
   throw new Error("Invalid configuration. See console for details.");
 }
 
-export default parsedEnv.data;
-export type Env = z.infer<typeof envSchema>;
+const data = parsedEnv.data;
+
+/** Prefer JWT_ACCESS_EXPIRES_IN; fall back to legacy JWT_EXPIRES_IN. */
+export default {
+  ...data,
+  JWT_ACCESS_EXPIRES_IN:
+    data.JWT_ACCESS_EXPIRES_IN || data.JWT_EXPIRES_IN || "15m",
+};
+export type Env = typeof data;

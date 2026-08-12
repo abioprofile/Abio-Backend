@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { testApp } from "../helpers/testApp";
 
 vi.mock("@/shared/utils/email", () => ({
-  default: {
-    sendWaitlistConfirmation: vi.fn().mockResolvedValue(undefined),
-  },
+  sendEmailVerification: vi.fn().mockResolvedValue(undefined),
+  sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+  sendWelcome: vi.fn().mockResolvedValue(undefined),
+  sendWaitlistConfirmation: vi.fn().mockResolvedValue(undefined),
 }));
 
 const WAITLIST = "/api/v1/waitlist";

@@ -4,11 +4,10 @@ import { authHeader, createTestUser } from "../helpers/factories";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/shared/utils/email", () => ({
-  default: class Email {
-    constructor(..._args: unknown[]) {}
-    sendEmailVerification = vi.fn().mockResolvedValue(undefined);
-    static sendWaitlistConfirmation = vi.fn().mockResolvedValue(undefined);
-  },
+  sendEmailVerification: vi.fn().mockResolvedValue(undefined),
+  sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+  sendWelcome: vi.fn().mockResolvedValue(undefined),
+  sendWaitlistConfirmation: vi.fn().mockResolvedValue(undefined),
 }));
 
 const USER = "/api/v1/user";

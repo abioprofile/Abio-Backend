@@ -57,8 +57,8 @@ export const resetPasswordSchema = z.object({
         .string({
           required_error: "Token is required",
         })
-        .min(6, "Token must be 6 characters")
-        .max(6, "Token must be 6 characters"),
+        .min(32, "Invalid reset token")
+        .max(128, "Invalid reset token"),
       password: z
         .string({
           required_error: "Password is required",
@@ -111,8 +111,18 @@ export const verifyEmailSchema = z.object({
       .string({
         required_error: "Verification token is required",
       })
-      .min(6, "Token must be 6 characters")
-      .max(6, "Token must be 6 characters"),
+      .min(32, "Invalid verification token")
+      .max(128, "Invalid verification token"),
+  }),
+});
+
+export const refreshTokenSchema = z.object({
+  body: z.object({
+    refreshToken: z
+      .string({
+        required_error: "Refresh token is required",
+      })
+      .min(32, "Invalid refresh token"),
   }),
 });
 
@@ -139,6 +149,7 @@ export type TForgotPassword = z.infer<typeof forgotPasswordSchema.shape.body>;
 export type TResetPassword = z.infer<typeof resetPasswordSchema.shape.body>;
 export type TUpdatePassword = z.infer<typeof updatePasswordSchema.shape.body>;
 export type TVerifyEmail = z.infer<typeof verifyEmailSchema.shape.body>;
+export type TRefreshToken = z.infer<typeof refreshTokenSchema.shape.body>;
 export type TResendVerificationEmail = z.infer<
   typeof resendVerificationEmailSchema.shape.body
 >;

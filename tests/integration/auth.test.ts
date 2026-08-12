@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { testApp } from "../helpers/testApp";
 import { authHeader, createTestUser } from "../helpers/factories";
 import { prisma } from "@/lib/prisma";
-
+import { enqueueWelcomeEmail } from "@/queues/queue";
 const { cacheStore } = vi.hoisted(() => ({
   cacheStore: new Map<string, string>(),
 }));
@@ -23,12 +23,10 @@ vi.mock("@/lib/cache", () => ({
 }));
 
 vi.mock("@/shared/utils/email", () => ({
-  default: class Email {
-    constructor(..._args: unknown[]) {}
-    sendEmailVerification = vi.fn().mockResolvedValue(undefined);
-    sendPasswordReset = vi.fn().mockResolvedValue(undefined);
-    static sendWaitlistConfirmation = vi.fn().mockResolvedValue(undefined);
-  },
+  sendEmailVerification: vi.fn().mockResolvedValue(undefined),
+  sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+  sendWelcome: vi.fn().mockResolvedValue(undefined),
+  sendWaitlistConfirmation: vi.fn().mockResolvedValue(undefined),
 }));
 
 const AUTH = "/api/v1/auth";
@@ -51,9 +49,16 @@ describe("Auth API", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.email).toBe(email);
-    expect(res.body.data.profile).toBeTruthy();
-    expect(res.body.data.password).toBeUndefined();
+    expect(res.body.message).toMatch(/check your email/i);
+    expect(res.body.data).toBeNull();
+    expect(res.body.statusCode).toBe(201);
+
+    const created = await prisma.user.findUnique({
+      where: { email },
+      include: { profile: true },
+    });
+    expect(created).toBeTruthy();
+    expect(created?.profile).toBeTruthy();
   });
 
   it("rejects duplicate signup email with 409", async () => {
@@ -84,10 +89,12 @@ describe("Auth API", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.user.email).toBe(user.email);
     expect(res.body.data.user.password).toBeUndefined();
-    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.accessToken).toBeTruthy();
+    expect(res.body.data.refreshToken).toBeTruthy();
     expect(res.headers["set-cookie"]).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/^access=/),
+        expect.stringMatching(/^refresh=/),
         expect.stringMatching(/^logged_in=/),
       ])
     );
@@ -158,7 +165,7 @@ describe("Auth API", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.body.message).toMatch(/token sent/i);
+    expect(res.body.message).toMatch(/sent/i);
 
     const updated = await prisma.user.findUnique({
       where: { id: user.id },
@@ -173,7 +180,7 @@ describe("Auth API", () => {
 
   it("resets password with a valid token then allows login", async () => {
     const user = await createTestUser({ password: "Password123!" });
-    const plainToken = "123456";
+    const plainToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
       .update(plainToken)
@@ -183,7 +190,7 @@ describe("Auth API", () => {
       where: { id: user.id },
       data: {
         passwordResetToken: hashedToken,
-        passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
+        passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
 
@@ -212,7 +219,7 @@ describe("Auth API", () => {
 
   it("rejects reset-password with invalid token", async () => {
     const res = await testApp.post(`${AUTH}/reset-password`).send({
-      token: "000000",
+      token: crypto.randomBytes(32).toString("hex"),
       password: "NewPass123!",
       passwordConfirm: "NewPass123!",
     });
@@ -259,8 +266,8 @@ describe("Auth API", () => {
     expect(res.body.success).toBe(false);
   });
 
-  it("verifies email with a valid token and returns a JWT", async () => {
-    const plainToken = "654321";
+  it("verifies email with a link token, issues tokens, and queues welcome email", async () => {
+    const plainToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
       .update(plainToken)
@@ -271,7 +278,7 @@ describe("Auth API", () => {
       where: { id: user.id },
       data: {
         emailVerificationToken: hashedToken,
-        emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+        emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
 
@@ -281,10 +288,48 @@ describe("Auth API", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.accessToken).toBeTruthy();
+    expect(res.body.data.refreshToken).toBeTruthy();
+    expect(enqueueWelcomeEmail).toHaveBeenCalled();
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.isEmailVerified).toBe(true);
+    expect(updated?.emailVerificationToken).toBeNull();
+  });
+
+  it("refreshes access token with a valid refresh token (rotation)", async () => {
+    const password = "Password123!";
+    const user = await createTestUser({ password, isEmailVerified: true });
+
+    const login = await testApp.post(`${AUTH}/login`).send({
+      email: user.email,
+      password,
+    });
+    expect(login.status).toBe(200);
+
+    const oldRefresh = login.body.data.refreshToken as string;
+    const refresh = await testApp.post(`${AUTH}/refresh`).send({
+      refreshToken: oldRefresh,
+    });
+
+    expect(refresh.status).toBe(200);
+    expect(refresh.body.data.accessToken).toBeTruthy();
+    expect(refresh.body.data.refreshToken).toBeTruthy();
+    expect(refresh.body.data.refreshToken).not.toBe(oldRefresh);
+
+    const reuse = await testApp.post(`${AUTH}/refresh`).send({
+      refreshToken: oldRefresh,
+    });
+    expect(reuse.status).toBe(401);
+  });
+
+  it("rejects refresh with an invalid token", async () => {
+    const res = await testApp.post(`${AUTH}/refresh`).send({
+      refreshToken: crypto.randomBytes(40).toString("hex"),
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
   });
 
   it("resends verification email for an unverified user", async () => {

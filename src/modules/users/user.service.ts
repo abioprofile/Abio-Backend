@@ -1,15 +1,21 @@
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { TUpdateUser } from "./user.schemas";
 import { logger } from "@/server";
 import { prisma } from "@/shared/config/database";
 import { UserWithProfile } from "@/shared/types";
 import { User } from "@prisma/client";
 import { customAlphabet } from "nanoid";
-import Email from "@/shared/utils/email";
+import { enqueueVerificationEmail } from "@/queues/queue";
+import {
+  buildEmailVerificationUrl,
+  createRawToken,
+} from "@/modules/auth/auth.tokens";
 
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** 6-digit OTP — still used for password reset emails. */
 export const generateOTP = async () => {
   const alphabet = "0123456789";
   const nanoid = customAlphabet(alphabet, 6);
@@ -86,19 +92,15 @@ export const updateEmail = async (
   email: string
 ): Promise<ServiceResponse> => {
   try {
-    const verificationOTP = await generateOTP();
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(verificationOTP)
-      .digest("hex");
+    const { raw, hash } = createRawToken(32);
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         email,
         isEmailVerified: false,
-        emailVerificationToken: hashedToken,
-        emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+        emailVerificationToken: hash,
+        emailVerificationExpires: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
       },
     });
 
@@ -107,7 +109,11 @@ export const updateEmail = async (
       include: { profile: true },
     });
 
-    await new Email(updatedUser!, verificationOTP).sendEmailVerification();
+    await enqueueVerificationEmail({
+      to: email,
+      name: updatedUser!.name,
+      verifyUrl: buildEmailVerificationUrl(raw),
+    });
 
     return ServiceResponse.success(
       "Verification email sent successfully",

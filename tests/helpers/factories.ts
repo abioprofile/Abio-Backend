@@ -34,10 +34,10 @@ export async function createTestUser(input: CreateTestUserInput = {}) {
   });
 }
 
-/** JWT matching how auth middleware verifies tokens (`{ id }`). */
+/** JWT matching how auth middleware verifies tokens (`{ id, typ: "access" }`). */
 export function signTestToken(userId: string) {
-  return jwt.sign({ id: userId }, env.JWT_SECRET, {
-    expiresIn: "1d",
+  return jwt.sign({ id: userId, typ: "access" }, env.JWT_SECRET, {
+    expiresIn: "15m",
   });
 }
 

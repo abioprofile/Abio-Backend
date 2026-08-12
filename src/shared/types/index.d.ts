@@ -11,7 +11,7 @@ export type UserWithProfile = Prisma.UserGetPayload<{
   include: { profile: true };
 }>;
 
-// Type for the login method return
+// Type for auth success payloads (verify / oauth / 2FA)
 export interface LoginResult {
   user?: {
     id: string;
@@ -21,6 +21,9 @@ export interface LoginResult {
     createdAt: Date;
     updatedAt: Date;
   };
+  accessToken?: string;
+  refreshToken?: string;
+  /** @deprecated prefer accessToken — kept briefly for older clients */
   token?: string;
   action?: string;
 }

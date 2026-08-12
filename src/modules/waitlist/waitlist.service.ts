@@ -2,7 +2,7 @@ import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import { ConflictError } from "@/shared/utils/errors";
-import Email from "@/shared/utils/email";
+import { enqueueWaitlistConfirmationEmail } from "@/queues/queue";
 import type { TCreateWaitlist } from "./waitlist.schemas";
 
 export const create = async (data: TCreateWaitlist) => {
@@ -22,9 +22,12 @@ export const create = async (data: TCreateWaitlist) => {
   });
 
   try {
-    await Email.sendWaitlistConfirmation(data.email, data.name);
+    await enqueueWaitlistConfirmationEmail({
+      to: data.email,
+      name: data.name,
+    });
   } catch (error) {
-    console.error("Failed to send waitlist confirmation email:", error);
+    console.error("Failed to enqueue waitlist confirmation email:", error);
   }
 
   return ServiceResponse.success(

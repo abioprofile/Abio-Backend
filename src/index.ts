@@ -1,5 +1,6 @@
 import { app, logger } from "@/server";
 import env from "@/env";
+import "@/queues/email.worker";
 
 const server = app.listen(env.PORT, () => {
   const { NODE_ENV, HOST, PORT } = env;

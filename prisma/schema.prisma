@@ -35,11 +35,24 @@ model User {
   isOnboardingCompleted    Boolean             @default(false)
   displayPreferences       DisplayPreference[]
   googleId                 String?
-  totp_secret               String?
+  totp_secret              String?
 
-  roles UserRole[]
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Profile {

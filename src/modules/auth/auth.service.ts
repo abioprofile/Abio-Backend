@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
 import { User } from "@prisma/client";
 import { StatusCodes } from "http-status-codes";
@@ -13,14 +12,17 @@ import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { AppError } from "@/shared/utils/appError";
 import { NotFoundError, UnauthorizedError } from "@/shared/utils/errors";
-import Email from "@/shared/utils/email";
-import { generateUniqueId, generateRandomBase32 } from "@/shared/utils/uniqueId";
+import {
+  enqueuePasswordResetEmail,
+  enqueueVerificationEmail,
+  enqueueWelcomeEmail,
+} from "@/queues/queue";
+import { generateRandomBase32 } from "@/shared/utils/uniqueId";
 import { decrypt, encrypt } from "@/shared/utils/encrpyt";
 import type { LoginResult, UserWithProfile } from "@/shared/types";
 import {
   comparePassword,
   hashPassword,
-  generateOTP,
 } from "@/modules/users/user.service";
 import type {
   TForgotPassword,
@@ -29,18 +31,24 @@ import type {
   TSignup,
   TUpdatePassword,
 } from "./auth.schemas";
+import {
+  buildEmailVerificationUrl,
+  buildPasswordResetUrl,
+  createRawToken,
+  issueAuthTokens,
+  revokeAllRefreshTokensForUser,
+  rotateRefreshToken,
+} from "./auth.tokens";
 
-export const signToken = (id: string): string => {
-  const secret = env.JWT_SECRET;
-  const expiresIn = env.JWT_EXPIRES_IN;
-  return jwt.sign({ id }, secret, { expiresIn } as any);
-};
+const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — link emails need more than OTP window
 
 export const signup = async (
   payload: TSignup
-): Promise<ServiceResponse<UserWithProfile | null>> => {
+): Promise<ServiceResponse<null>> => {
   const existingUser = await prisma.user.findUnique({
     where: { email: payload.email },
+    select: { id: true },
   });
 
   if (existingUser) {
@@ -50,49 +58,38 @@ export const signup = async (
     );
   }
 
-  const verificationOTP = await generateOTP();
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(verificationOTP)
-    .digest("hex");
+  const { raw, hash } = createRawToken(32);
 
   const user = await prisma.user.create({
     data: {
       email: payload.email,
       name: payload.name,
       password: payload.password,
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+      emailVerificationToken: hash,
+      emailVerificationExpires: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
+      profile: {
+        create: {},
+      },
     },
   });
 
-  await prisma.profile.create({
-    data: {
-      userId: user.id,
-    },
+  await enqueueVerificationEmail({
+    to: user.email,
+    name: user.name,
+    verifyUrl: buildEmailVerificationUrl(raw),
   });
-
-  const newUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    include: { profile: true },
-  });
-
-  try {
-    await new Email(newUser!, verificationOTP).sendEmailVerification();
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-  }
 
   return ServiceResponse.success(
     "User created successfully. Please check your email to verify your account.",
-    newUser,
+    null,
     StatusCodes.CREATED
   );
 };
 
 export type LoginSuccess = {
   user: Record<string, unknown>;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
 };
 
 export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
@@ -120,18 +117,26 @@ export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
 
   if (!user.isEmailVerified) {
     throw new AppError(
-      "Please verify your email address before logging in. Check your inbox for the verification code.",
+      "Please verify your email address before logging in. Check your inbox for the verification link.",
       StatusCodes.FORBIDDEN
     );
   }
 
   const { password: _, ...userWithoutPassword } = user;
-  const token = signToken(user.id);
+  const tokens = await issueAuthTokens(user.id);
 
   return {
     user: userWithoutPassword,
-    token,
+    ...tokens,
   };
+};
+
+export const refreshSession = async (rawRefreshToken: string) => {
+  try {
+    return await rotateRefreshToken(rawRefreshToken);
+  } catch {
+    throw new UnauthorizedError("Invalid or expired refresh token");
+  }
 };
 
 export const forgotPassword = async (data: TForgotPassword): Promise<void> => {
@@ -146,22 +151,22 @@ export const forgotPassword = async (data: TForgotPassword): Promise<void> => {
     );
   }
 
-  const resetToken = generateUniqueId(6);
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(resetToken)
-    .digest("hex");
+  const { raw, hash } = createRawToken(32);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      passwordResetToken: hashedToken,
-      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
+      passwordResetToken: hash,
+      passwordResetExpires: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
     },
   });
 
   try {
-    await new Email({ ...user, profile: null }, resetToken).sendPasswordReset();
+    await enqueuePasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      resetUrl: buildPasswordResetUrl(raw),
+    });
   } catch {
     await prisma.user.update({
       where: { id: user.id },
@@ -205,6 +210,9 @@ export const resetPassword = async (data: TResetPassword): Promise<void> => {
       passwordChangedAt: new Date(),
     },
   });
+
+  // Force re-login on all devices after password reset
+  await revokeAllRefreshTokensForUser(user.id);
 };
 
 export const updatePassword = async (
@@ -234,11 +242,20 @@ export const updatePassword = async (
       passwordChangedAt: new Date(),
     },
   });
+
+  await revokeAllRefreshTokensForUser(userId);
 };
 
 export const verifyEmail = async (
   token: string
 ): Promise<ServiceResponse<LoginResult>> => {
+  if (!token || typeof token !== "string") {
+    throw new AppError(
+      "Verification token is required",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const user = await prisma.user.findFirst({
@@ -268,13 +285,23 @@ export const verifyEmail = async (
     include: { profile: true },
   });
 
-  const bearerToken = signToken(verifiedUser.id);
+  const tokens = await issueAuthTokens(verifiedUser.id);
+
+  void enqueueWelcomeEmail({
+    to: verifiedUser.email,
+    name: verifiedUser.name,
+    url: env.CLIENT_URL,
+  }).catch((error) => {
+    console.error("Failed to enqueue welcome email:", error);
+  });
 
   return ServiceResponse.success(
     "Email verified successfully",
     {
       user: verifiedUser,
-      token: bearerToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      token: tokens.accessToken,
     },
     StatusCodes.OK
   );
@@ -296,24 +323,24 @@ export const resendVerificationEmail = async (
     throw new AppError("Email is already verified", StatusCodes.BAD_REQUEST);
   }
 
-  const verificationOTP = await generateOTP();
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(verificationOTP)
-    .digest("hex");
+  const { raw, hash } = createRawToken(32);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000),
+      emailVerificationToken: hash,
+      emailVerificationExpires: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
     },
   });
 
   try {
-    await new Email(user, verificationOTP).sendEmailVerification();
+    await enqueueVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl: buildEmailVerificationUrl(raw),
+    });
   } catch (error) {
-    console.error("Failed to send verification email:", error);
+    console.error("Failed to enqueue verification email:", error);
     throw new AppError(
       "Failed to send verification email. Please try again later.",
       StatusCodes.INTERNAL_SERVER_ERROR
@@ -328,8 +355,12 @@ export const resendVerificationEmail = async (
 };
 
 export const oauthLogin = async (user: User) => {
-  const token = signToken(user.id);
-  return ServiceResponse.success("Login successful", { token, user }, 200);
+  const tokens = await issueAuthTokens(user.id);
+  return ServiceResponse.success(
+    "Login successful",
+    { ...tokens, token: tokens.accessToken, user },
+    200
+  );
 };
 
 export const setup2Fa = async (
@@ -415,10 +446,11 @@ export const verify2FAOtp = async (email: string, code: string) => {
     return ServiceResponse.failure("OTP Verification failed", null);
   }
 
-  const token = signToken(user.id);
+  const tokens = await issueAuthTokens(user.id);
 
   return ServiceResponse.success("Logged in successfully", {
     user: user,
-    token,
+    ...tokens,
+    token: tokens.accessToken,
   });
 };
