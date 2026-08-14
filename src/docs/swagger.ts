@@ -482,13 +482,19 @@ In production, passwords must be at least 8 characters and include a letter, a n
         type: "object",
         properties: {
           title: { type: "string", example: "GitHub Profile" },
-          url: { type: "string", example: "https://github.com/abio" },
+          url: {
+            type: "string",
+            format: "uri",
+            example: "https://github.com/abio",
+            description: "Must start with http:// or https://",
+          },
           platform: { type: "string", example: "GITHUB" },
           isVisible: { type: "boolean", example: true },
           displayOrder: { type: "integer", minimum: 0, example: 0 },
         },
         example: {
           title: "GitHub Profile",
+          url: "https://github.com/abio",
           isVisible: true,
         },
       },
@@ -972,6 +978,19 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         responses: { "200": { description: "Avatar updated" } },
+      },
+      delete: {
+        tags: ["Profiles"],
+        summary: "Remove profile avatar",
+        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+        responses: {
+          "200": {
+            description:
+              "Avatar cleared (Cloudinary asset deleted when applicable)",
+          },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Profile not found" },
+        },
       },
     },
     "/api/v1/user/{username}": {

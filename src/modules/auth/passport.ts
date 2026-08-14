@@ -1,11 +1,20 @@
+import crypto from "crypto";
 import { prisma } from "@/shared/config/database";
-import { findByEmail } from "@/modules/users/user.service";
 import passport, { PassportStatic } from "passport";
 import {
   Profile,
   Strategy as GoogleStrategy,
   VerifyCallback,
 } from "passport-google-oauth20";
+
+/** Mark first-time Google signups so the controller can enqueue welcome email. */
+export type GoogleAuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  [key: string]: unknown;
+  __isNewGoogleSignup?: boolean;
+};
 
 const setupPassport = (passportInstance: PassportStatic) => {
   passportInstance.use(
@@ -21,40 +30,54 @@ const setupPassport = (passportInstance: PassportStatic) => {
         profile: Profile,
         done: VerifyCallback
       ) => {
-        const email = profile.emails![0].value;
-        let user = await findByEmail(email);
+        try {
+          const email = profile.emails?.[0]?.value;
+          if (!email) {
+            return done(null, false, { message: "GOOGLE_EMAIL_MISSING" });
+          }
 
-        if (!user) {
-          user = await prisma.user.create({
+          // Returning Google user (same Google account)
+          const byGoogleId = await prisma.user.findFirst({
+            where: { googleId: profile.id },
+          });
+          if (byGoogleId) {
+            return done(null, byGoogleId as GoogleAuthUser);
+          }
+
+          const byEmail = await prisma.user.findUnique({
+            where: { email },
+          });
+
+          // Email already used by password (or other) signup — do not merge
+          if (byEmail) {
+            return done(null, false, { message: "EMAIL_ALREADY_REGISTERED" });
+          }
+
+          // First-time Google signup
+          const user = await prisma.user.create({
             data: {
-              email: email,
-              name: profile.displayName,
+              email,
+              name: profile.displayName || email.split("@")[0],
               active: true,
               isEmailVerified: true,
-              password: "",
+              // Unusable random password — Google users must not log in with ""
+              password: crypto.randomBytes(32).toString("hex"),
               googleId: profile.id,
+              profile: {
+                create: {
+                  avatarUrl: profile.photos?.[0]?.value,
+                  isPublic: true,
+                },
+              },
             },
           });
 
-          await prisma.profile.create({
-            data: {
-              userId: user.id,
-              avatarUrl: profile.photos![0].value,
-              isPublic: true,
-            },
-          });
-        } else {
-          await prisma.user.update({
-            where: {
-              email: email,
-            },
-            data: {
-              googleId: profile.id,
-            },
-          });
+          const authUser = user as GoogleAuthUser;
+          authUser.__isNewGoogleSignup = true;
+          return done(null, authUser);
+        } catch (error) {
+          return done(error as Error);
         }
-
-        done(null, user);
       }
     )
   );

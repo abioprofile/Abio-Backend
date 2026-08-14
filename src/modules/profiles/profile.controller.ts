@@ -53,8 +53,16 @@ export const updateAvatar = catchAsync(
 
     const serviceResponse = await profileService.updateAvatar(
       (req as AuthenticatedRequest).user.id,
-      req.file.buffer
+      req.file.buffer,
+      req.file.mimetype
     );
     return handleServiceResponse(serviceResponse, res);
   }
 );
+
+export const deleteAvatar = catchAsync(async (req: Request, res: Response) => {
+  const serviceResponse = await profileService.deleteAvatar(
+    (req as AuthenticatedRequest).user.id
+  );
+  return handleServiceResponse(serviceResponse, res);
+});

@@ -4,8 +4,17 @@ import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import { AppError } from "@/shared/utils/appError";
 import { ConflictError } from "@/shared/utils/errors";
-import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "@/shared/utils/cloudinary";
 import cache from "@/lib/cache";
+
+const bustPublicProfileCache = async (username: string | null | undefined) => {
+  if (username) {
+    await cache.del(`public_profiles:${username}`);
+  }
+};
 
 export const getByUserId = async (userId: string) => {
   const profile = await prisma.profile.findUnique({
@@ -140,8 +149,17 @@ export const checkUsernameAvailability = async (username: string) => {
   );
 };
 
-export const updateAvatar = async (userId: string, fileBuffer: Buffer) => {
-  const { url } = await uploadToCloudinary(fileBuffer, "avatars");
+export const updateAvatar = async (
+  userId: string,
+  fileBuffer: Buffer,
+  mimetype?: string
+) => {
+  const existing = await prisma.profile.findUnique({
+    where: { userId },
+    select: { avatarUrl: true, username: true },
+  });
+
+  const { url } = await uploadToCloudinary(fileBuffer, "avatars", mimetype);
 
   const profile = await prisma.profile.update({
     where: { userId },
@@ -153,7 +171,48 @@ export const updateAvatar = async (userId: string, fileBuffer: Buffer) => {
     },
   });
 
+  if (existing?.avatarUrl) {
+    void deleteFromCloudinary(existing.avatarUrl);
+  }
+  await bustPublicProfileCache(profile.username);
+
   return ServiceResponse.success("Avatar updated successfully", profile);
+};
+
+export const deleteAvatar = async (userId: string) => {
+  const existing = await prisma.profile.findUnique({
+    where: { userId },
+    select: { avatarUrl: true, username: true },
+  });
+
+  if (!existing) {
+    return ServiceResponse.failure(
+      "Profile not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (!existing.avatarUrl) {
+    return ServiceResponse.success("No avatar to remove", {
+      avatarUrl: null,
+    });
+  }
+
+  const profile = await prisma.profile.update({
+    where: { userId },
+    data: { avatarUrl: null },
+    include: {
+      links: {
+        orderBy: { displayOrder: "asc" },
+      },
+    },
+  });
+
+  void deleteFromCloudinary(existing.avatarUrl);
+  await bustPublicProfileCache(existing.username);
+
+  return ServiceResponse.success("Avatar removed successfully", profile);
 };
 
 /** Compatibility object for callers that used profileService.* */
@@ -163,4 +222,5 @@ export const profileService = {
   getPublicByUsername,
   checkUsernameAvailability,
   updateAvatar,
+  deleteAvatar,
 };

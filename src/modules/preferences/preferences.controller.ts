@@ -36,7 +36,12 @@ export const updateStylePreference = catchAsync(
 
     const data: Record<string, unknown> = { ...body };
     if (req.file) {
-      data.image = await uploadToCloudinary(req.file.buffer, "wallpapers");
+      const uploaded = await uploadToCloudinary(
+        req.file.buffer,
+        "wallpapers",
+        req.file.mimetype
+      );
+      data.image = uploaded.url;
     }
 
     const response = await preferencesService.updateBackgroundPreferences(

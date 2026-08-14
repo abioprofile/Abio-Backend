@@ -354,11 +354,30 @@ export const resendVerificationEmail = async (
   );
 };
 
-export const oauthLogin = async (user: User) => {
+export const oauthLogin = async (
+  user: User & { __isNewGoogleSignup?: boolean }
+) => {
   const tokens = await issueAuthTokens(user.id);
+
+  // Welcome only on first Google signup — not on later Google sign-ins
+  if (user.__isNewGoogleSignup) {
+    void enqueueWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      url: env.CLIENT_URL,
+    }).catch((error) => {
+      console.error("Failed to enqueue Google welcome email:", error);
+    });
+  }
+
+  // Strip internal flag before returning user payload
+  const { __isNewGoogleSignup: _, ...safeUser } = user as User & {
+    __isNewGoogleSignup?: boolean;
+  };
+
   return ServiceResponse.success(
-    "Login successful",
-    { ...tokens, token: tokens.accessToken, user },
+    user.__isNewGoogleSignup ? "Signup successful" : "Login successful",
+    { ...tokens, token: tokens.accessToken, user: safeUser },
     200
   );
 };

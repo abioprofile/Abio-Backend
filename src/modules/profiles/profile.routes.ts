@@ -19,6 +19,11 @@ profileRouter.patch(
   uploadImage.single("avatar"),
   profileController.updateAvatar
 );
+profileRouter.delete(
+  "/profile/avatar",
+  authenticate,
+  profileController.deleteAvatar
+);
 
 // Must stay last among /api/v1/user mounts — matches any username
 profileRouter.get("/:username", profileController.getPublicProfile);

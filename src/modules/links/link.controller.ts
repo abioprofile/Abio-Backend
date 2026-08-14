@@ -76,7 +76,8 @@ export const updateLinkIcon = catchAsync(
     }
     const serviceResponse = await linkService.updateLinkIcon(
       params.id,
-      req.file.buffer
+      req.file.buffer,
+      req.file.mimetype
     );
     return handleServiceResponse(serviceResponse, res);
   }

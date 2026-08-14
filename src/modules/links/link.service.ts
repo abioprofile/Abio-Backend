@@ -249,10 +249,11 @@ export const trackClick = async (linkId: string) => {
 
 export const updateLinkIcon = async (
   linkId: string,
-  file: Buffer<ArrayBufferLike>
+  file: Buffer<ArrayBufferLike>,
+  mimetype?: string
 ) => {
   try {
-    const uploaded = await uploadToCloudinary(file, "icon_urls");
+    const uploaded = await uploadToCloudinary(file, "icon_urls", mimetype);
 
     const data = await prisma.link.update({
       where: { id: linkId },

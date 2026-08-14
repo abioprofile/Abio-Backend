@@ -18,14 +18,36 @@ authRouter.get(
     session: false,
   })
 );
-authRouter.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${env.CLIENT_URL}/auth/sign-in`,
-  }),
-  authController.loginWithGoogle
-);
+authRouter.get("/google/callback", (req, res, next) => {
+  passport.authenticate(
+    "google",
+    { session: false },
+    (
+      err: Error | null,
+      user: Express.User | false | undefined,
+      info?: { message?: string }
+    ) => {
+      if (err) {
+        return res.redirect(
+          `${env.CLIENT_URL}/auth/sign-in?error=oauth_failed`
+        );
+      }
+
+      if (!user) {
+        const code =
+          info?.message === "EMAIL_ALREADY_REGISTERED"
+            ? "email_exists"
+            : info?.message === "GOOGLE_EMAIL_MISSING"
+              ? "oauth_email_missing"
+              : "oauth_failed";
+        return res.redirect(`${env.CLIENT_URL}/auth/sign-in?error=${code}`);
+      }
+
+      req.user = user;
+      return next();
+    }
+  )(req, res, next);
+}, authController.loginWithGoogle);
 
 authRouter.post("/logout", authController.logout);
 
