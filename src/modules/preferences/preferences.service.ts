@@ -1,120 +1,19 @@
 import cache from "@/lib/cache";
-import {
-  TUpdateBackground,
-  TUpdateCorners,
-  TUpdateFont,
-  TUpdatePreferences,
-} from "./preferences.schemas";
+import type { TUpdatePreferences } from "./preferences.schemas";
 import { prisma } from "@/shared/config/database";
 import { profileService } from "@/modules/profiles/profile.service";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
-import { DisplayPreference } from "@prisma/client";
 import { StatusCodes } from "http-status-codes";
+import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import AppError from "@/shared/utils/appError";
 
-export const updateBackgroundPreferences = async (
-  userId: string,
-  data: TUpdateBackground
-): Promise<ServiceResponse<DisplayPreference>> => {
-  const profile = await profileService.getByUserId(userId);
-
-  const prevSettings = await prisma.displayPreference.findUnique({
-    where: { profileId: profile.data!.id },
-  });
-
-  const update = {
-    ...((prevSettings?.wallpaper_config ?? {}) as object),
-    ...data,
-  };
-
-  const settings = await prisma.displayPreference.upsert({
-    where: {
-      profileId: profile.data!.id,
-    },
-    update: {
-      wallpaper_config: update,
-    },
-    create: {
-      userId,
-      profileId: profile.data!.id,
-      wallpaper_config: update,
-    },
-    include: {
-      profile: true,
-    },
-  });
-
-  cache.del(`public_profiles:${settings.profile.username}`);
-
-  return ServiceResponse.success(
-    "Wallpaper settings updated successfully",
-    settings,
-    StatusCodes.OK
-  );
-};
-
-export const updateFontPreferences = async (
-  userId: string,
-  data: TUpdateFont
-): Promise<ServiceResponse<DisplayPreference>> => {
-  const profile = await profileService.getByUserId(userId);
-  const settings = await prisma.displayPreference.upsert({
-    where: {
-      profileId: profile.data!.id,
-    },
-    create: {
-      profileId: profile.data!.id,
-      userId,
-      font_config: data,
-    },
-    update: {
-      font_config: data,
-    },
-    include: {
-      profile: true,
-    },
-  });
-
-  cache.del(`public_profiles:${settings.profile.username}`);
-
-  return ServiceResponse.success("Settings updated", settings);
-};
-
-export const updateCornerPreferences = async (
-  userId: string,
-  data: TUpdateCorners
-): Promise<ServiceResponse<DisplayPreference>> => {
-  const profile = await profileService.getByUserId(userId);
-  const settings = await prisma.displayPreference.upsert({
-    where: {
-      profileId: profile.data!.id,
-    },
-    update: {
-      corner_config: data,
-    },
-    create: {
-      profileId: profile.data!.id,
-      userId,
-      corner_config: data,
-    },
-    include: {
-      profile: true,
-    },
-  });
-
-  cache.del(`public_profiles:${settings.profile.username}`);
-
-  return ServiceResponse.success(
-    "Corner settings updated successfully",
-    settings,
-    StatusCodes.OK
-  );
+const bustCache = (username: string | null | undefined) => {
+  if (username) cache.del(`public_profiles:${username}`);
 };
 
 export const getPreferences = async (userId: string) => {
   const settings = await prisma.displayPreference.findFirst({
-    where: {
-      userId,
-    },
+    where: { userId },
   });
 
   if (!settings) {
@@ -139,38 +38,71 @@ export const getPreferences = async (userId: string) => {
   return ServiceResponse.success(
     "Settings retrieved successfully",
     settings,
-    200
+    StatusCodes.OK
   );
 };
 
+/**
+ * Save Changes — replace provided sections on display preferences.
+ * Omitting a section leaves it unchanged.
+ */
 export const updatePreferences = async (
   userId: string,
   settingsData: TUpdatePreferences
 ) => {
   const profile = await profileService.getByUserId(userId);
 
+  if (!profile.data) {
+    throw new AppError("Profile not found", StatusCodes.NOT_FOUND);
+  }
+
   const settings = await prisma.displayPreference.upsert({
-    where: {
-      profileId: profile.data!.id,
-    },
-    update: {
-      ...settingsData,
-    },
+    where: { profileId: profile.data.id },
+    update: { ...settingsData },
     create: {
-      profileId: profile.data!.id,
+      profileId: profile.data.id,
       userId,
-      ...settingsData,
+      font_config: settingsData.font_config ?? {},
+      corner_config: settingsData.corner_config ?? {},
+      wallpaper_config: settingsData.wallpaper_config ?? {},
+      selected_theme: settingsData.selected_theme ?? null,
     },
-    include: {
-      profile: true,
-    },
+    include: { profile: true },
   });
 
-  cache.del(`public_profiles:${settings.profile.username}`);
+  bustCache(settings.profile.username);
 
   return ServiceResponse.success(
-    "Corner settings updated successfully",
+    "Preferences updated successfully",
     settings,
     StatusCodes.OK
   );
+};
+
+/** Upload wallpaper image → return CDN URL for wallpaper_config.image */
+export const uploadWallpaperImage = async (
+  userId: string,
+  fileBuffer: Buffer,
+  mimetype?: string
+) => {
+  // Ensure prefs row exists
+  await getPreferences(userId);
+
+  const { url, publicId } = await uploadToCloudinary(
+    fileBuffer,
+    "wallpapers",
+    mimetype
+  );
+
+  return ServiceResponse.success(
+    "Wallpaper image uploaded successfully",
+    { url, publicId },
+    StatusCodes.OK
+  );
+};
+
+export const preferencesService = {
+  getPreferences,
+  updatePreferences,
+  uploadWallpaperImage,
 };

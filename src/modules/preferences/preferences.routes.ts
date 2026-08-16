@@ -12,28 +12,16 @@ preferencesRouter.get(
 );
 
 preferencesRouter.put(
-  "/preferences/background",
-  authenticate,
-  uploadImage.single("image"),
-  preferencesController.updateStylePreference
-);
-
-preferencesRouter.put(
-  "/preferences/fonts",
-  authenticate,
-  preferencesController.updateFontsPreference
-);
-
-preferencesRouter.put(
-  "/preferences/corners",
-  authenticate,
-  preferencesController.updateCornerPreference
-);
-
-preferencesRouter.put(
   "/preferences",
   authenticate,
   preferencesController.updatePreferences
+);
+
+preferencesRouter.post(
+  "/preferences/wallpaper/image",
+  authenticate,
+  uploadImage.single("image"),
+  preferencesController.uploadWallpaper
 );
 
 export default preferencesRouter;

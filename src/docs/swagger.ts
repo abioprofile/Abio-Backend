@@ -345,15 +345,24 @@ In production, passwords must be at least 8 characters and include a letter, a n
         properties: {
           name: {
             type: "string",
-            example: "Inter",
-            description: "Letters, numbers, hyphens only",
+            example: "Poppins",
+            description: "Font family from Style → Font",
           },
-          fillColor: { type: "string", example: "#111111" },
-          strokeColor: { type: "string", example: "#000000" },
+          italic: { type: "boolean", example: false },
+          underline: { type: "boolean", example: false },
+          fillColor: { type: "string", example: "#000000" },
+          weight: {
+            type: "string",
+            enum: ["regular", "medium", "semibold", "bold"],
+            example: "regular",
+          },
         },
         example: {
-          name: "Inter",
-          fillColor: "#111111",
+          name: "Poppins",
+          fillColor: "#000000",
+          weight: "regular",
+          italic: false,
+          underline: false,
         },
       },
       CornerConfigInput: {
@@ -366,19 +375,29 @@ In production, passwords must be at least 8 characters and include a letter, a n
             example: "round",
           },
           fillColor: { type: "string", example: "#ffffff" },
-          strokeColor: { type: "string", example: "#e5e5e5" },
+          strokeColor: {
+            type: "string",
+            nullable: true,
+            example: "#e5e5e5",
+          },
           opacity: {
             type: "number",
             minimum: 0,
             maximum: 1,
-            example: 0.9,
+            example: 0.4,
+            description: "0–1; map UI slider on the client",
           },
-          shadowSize: { type: "string", example: "8px" },
-          shadowColor: { type: "string", example: "rgba(0,0,0,0.15)" },
+          shadow: {
+            type: "string",
+            enum: ["none", "soft", "hard"],
+            example: "hard",
+          },
         },
         example: {
           type: "round",
-          opacity: 0.9,
+          fillColor: "#ffffff",
+          opacity: 0.4,
+          shadow: "hard",
         },
       },
       WallpaperConfigInput: {
@@ -387,8 +406,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
         properties: {
           type: {
             type: "string",
-            example: "solid",
-            description: 'e.g. "solid", "image", "gradient"',
+            enum: ["fill", "solid", "gradient", "image"],
+            example: "fill",
+            description: 'UI: Fill | Gradient | Image. "solid" aliases "fill".',
           },
           image: {
             type: "string",
@@ -397,7 +417,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
           backgroundColor: {
             oneOf: [
-              { type: "string", example: "#ffffff" },
+              { type: "string", example: "#0a0a0a" },
               {
                 type: "array",
                 items: {
@@ -417,24 +437,39 @@ In production, passwords must be at least 8 characters and include a letter, a n
           },
         },
         example: {
-          type: "solid",
-          backgroundColor: "#ffffff",
+          type: "fill",
+          backgroundColor: "#0a0a0a",
         },
       },
       UpdatePreferencesInput: {
         type: "object",
-        required: ["font_config", "wallpaper_config", "corner_config"],
         properties: {
           font_config: { $ref: "#/components/schemas/FontConfigInput" },
           wallpaper_config: {
             $ref: "#/components/schemas/WallpaperConfigInput",
           },
           corner_config: { $ref: "#/components/schemas/CornerConfigInput" },
+          selected_theme: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            description: "Themes tab selection; null clears theme",
+          },
         },
         example: {
-          font_config: { name: "Inter", fillColor: "#111111" },
-          wallpaper_config: { type: "solid", backgroundColor: "#ffffff" },
-          corner_config: { type: "round" },
+          font_config: {
+            name: "Poppins",
+            fillColor: "#000000",
+            weight: "regular",
+          },
+          wallpaper_config: { type: "fill", backgroundColor: "#0a0a0a" },
+          corner_config: {
+            type: "round",
+            fillColor: "#ffffff",
+            shadow: "hard",
+            opacity: 0.4,
+          },
+          selected_theme: null,
         },
       },
 
@@ -1022,7 +1057,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
       },
       put: {
         tags: ["Profiles"],
-        summary: "Update all display preferences",
+        summary: "Save Changes — update appearance preferences",
+        description:
+          "Send font_config, corner_config, wallpaper_config, and/or selected_theme. Omitted sections are left unchanged.",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
           required: true,
@@ -1035,71 +1072,28 @@ In production, passwords must be at least 8 characters and include a letter, a n
         responses: { "200": { description: "Updated" } },
       },
     },
-    "/api/v1/user/preferences/fonts": {
-      put: {
+    "/api/v1/user/preferences/wallpaper/image": {
+      post: {
         tags: ["Profiles"],
-        summary: "Update font preferences",
+        summary: "Upload wallpaper image",
+        description:
+          "Returns { url }. Include that URL in PUT /preferences wallpaper_config when type is image.",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/FontConfigInput" },
-            },
-          },
-        },
-        responses: { "200": { description: "Font preferences updated" } },
-      },
-    },
-    "/api/v1/user/preferences/corners": {
-      put: {
-        tags: ["Profiles"],
-        summary: "Update corner preferences",
-        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CornerConfigInput" },
-            },
-          },
-        },
-        responses: { "200": { description: "Corner preferences updated" } },
-      },
-    },
-    "/api/v1/user/preferences/background": {
-      put: {
-        tags: ["Profiles"],
-        summary: "Update background / wallpaper preferences",
-        security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/WallpaperConfigInput" },
-            },
             "multipart/form-data": {
               schema: {
                 type: "object",
-                required: ["type"],
+                required: ["image"],
                 properties: {
-                  type: {
-                    type: "string",
-                    example: "image",
-                    description: 'Use "image" when uploading a file',
-                  },
-                  backgroundColor: { type: "string", example: "#ffffff" },
-                  image: {
-                    type: "string",
-                    format: "binary",
-                    description: "Wallpaper image file when type is image",
-                  },
+                  image: { type: "string", format: "binary" },
                 },
               },
             },
           },
         },
-        responses: { "200": { description: "Background preferences updated" } },
+        responses: { "200": { description: "Uploaded — returns url + publicId" } },
       },
     },
 

@@ -1,16 +1,16 @@
 import {
-  updateFontSchema,
-  updateCornersSchema,
-  updateBackgroundSchema,
+  fontConfigSchema,
+  cornerConfigSchema,
+  wallpaperConfigSchema,
 } from "@/modules/preferences/preferences.schemas";
 import z from "zod";
 
 export const createThemeSchema = z.object({
   body: z.object({
     name: z.string().min(1),
-    font_config: updateFontSchema.shape.body,
-    corner_config: updateCornersSchema.shape.body,
-    wallpaper_config: updateBackgroundSchema.shape.body,
+    font_config: fontConfigSchema,
+    corner_config: cornerConfigSchema,
+    wallpaper_config: wallpaperConfigSchema,
   }),
 });
 
