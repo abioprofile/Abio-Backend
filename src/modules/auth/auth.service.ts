@@ -102,6 +102,7 @@ export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
       active: true,
       password: true,
       isEmailVerified: true,
+      isOnboardingCompleted: true,
       createdAt: true,
       updatedAt: true,
       profile: true,
