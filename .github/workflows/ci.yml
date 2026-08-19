@@ -56,6 +56,7 @@ jobs:
       REDIS_URL: redis://127.0.0.1:6379
       EMAIL_FROM_NAME: Abio CI
       EMAIL_FROM: ci@abio.local
+      EMAIL_PROVIDER: smtp
       SMTP_HOST: localhost
       SMTP_PORT: 1025
       SMTP_USERNAME: ci
