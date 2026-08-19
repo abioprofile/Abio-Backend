@@ -165,4 +165,28 @@ describe("Links API (legacy LinkController)", () => {
     expect(res.status).toBe(201);
     expect(res.body.data.platform).toBe("website");
   });
+
+  it("assigns unique displayOrder when creates race (onboarding-style)", async () => {
+    const payloads = [
+      { title: "A", url: "https://github.com/abio-a", platform: "github" },
+      { title: "B", url: "https://twitter.com/abio-b", platform: "twitter" },
+      { title: "C", url: "https://wa.me/15551234567", platform: "whatsapp" },
+      { title: "D", url: "https://example.com/site", platform: "website" },
+    ];
+
+    const results = await Promise.all(
+      payloads.map((body) => testApp.post(LINKS).set(headers).send(body))
+    );
+
+    for (const res of results) {
+      expect(res.status).toBe(201);
+    }
+
+    const orders = results
+      .map((r) => r.body.data.displayOrder as number)
+      .sort((a, b) => a - b);
+
+    expect(orders).toEqual([0, 1, 2, 3]);
+    expect(new Set(orders).size).toBe(4);
+  });
 });

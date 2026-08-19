@@ -34,35 +34,43 @@ export const create = async (userId: string, data: TCreateLink) => {
     throw new NotFoundError("Profile");
   }
 
-  const existingLink = await prisma.link.findFirst({
-    where: {
-      profileId: profile.id,
-      url: data.url,
-    },
-  });
-
-  if (existingLink) {
-    throw new ConflictError("You already have a link with this URL");
-  }
-
-  const maxOrder = await prisma.link.findFirst({
-    where: { profileId: profile.id },
-    orderBy: { displayOrder: "desc" },
-    select: { displayOrder: true },
-  });
-
   const detectedPlatform = detectPlatform(data.url);
   const platform = detectedPlatform || data.platform || null;
 
-  const link = await prisma.link.create({
-    data: {
-      title: data.title,
-      url: data.url,
-      platform,
-      isVisible: data.isVisible ?? true,
-      profileId: profile.id,
-      displayOrder: (maxOrder?.displayOrder ?? -1) + 1,
-    },
+  /**
+   * Lock the profile row so parallel creates (e.g. onboarding) cannot both
+   * read the same max displayOrder and write duplicates.
+   */
+  const link = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM profiles WHERE id = ${profile.id} FOR UPDATE`;
+
+    const existingLink = await tx.link.findFirst({
+      where: {
+        profileId: profile.id,
+        url: data.url,
+      },
+    });
+
+    if (existingLink) {
+      throw new ConflictError("You already have a link with this URL");
+    }
+
+    const maxOrder = await tx.link.findFirst({
+      where: { profileId: profile.id },
+      orderBy: { displayOrder: "desc" },
+      select: { displayOrder: true },
+    });
+
+    return tx.link.create({
+      data: {
+        title: data.title,
+        url: data.url,
+        platform,
+        isVisible: data.isVisible ?? true,
+        profileId: profile.id,
+        displayOrder: (maxOrder?.displayOrder ?? -1) + 1,
+      },
+    });
   });
 
   return ServiceResponse.success(
@@ -77,7 +85,7 @@ export const getAllByUserId = async (userId: string) => {
     where: { userId },
     include: {
       links: {
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
     },
   });

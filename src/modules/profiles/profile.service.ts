@@ -21,7 +21,7 @@ export const getByUserId = async (userId: string) => {
     where: { userId },
     include: {
       links: {
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
       display: true,
     },
@@ -63,7 +63,7 @@ export const update = async (
     data: { ...data, displayName: undefined } as any,
     include: {
       links: {
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
       user: {
         select: { name: true },
@@ -107,7 +107,7 @@ export const getPublicByUsername = async (username: string) => {
       updatedAt: true,
       links: {
         where: { isVisible: true },
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
       user: {
         select: { name: true },
@@ -166,7 +166,7 @@ export const updateAvatar = async (
     data: { avatarUrl: url },
     include: {
       links: {
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
     },
   });
@@ -204,7 +204,7 @@ export const deleteAvatar = async (userId: string) => {
     data: { avatarUrl: null },
     include: {
       links: {
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
     },
   });
