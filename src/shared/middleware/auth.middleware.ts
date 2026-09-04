@@ -122,7 +122,7 @@ export const hasProfile = catchAsync(
   },
 );
 
-export const hasRole = (_role: string) =>
+export const hasRole = (roles: string[]) =>
   catchAsync(async function (
     req: AuthenticatedRequest,
     _res: Response,
@@ -132,9 +132,12 @@ export const hasRole = (_role: string) =>
       return next(new AppError("Not authenticated", 401));
     }
 
-    if (!req.user.roles.find(({ role }) => role.name === _role)) {
-      return next(new AppError("Not authorized", 403));
-    }
+   const userRoleNames = req.user.roles.map(({ role }) => role.name);
+   const isAuthorized = roles.some((name) => userRoleNames.includes(name));
 
-    return next();
+   if (!isAuthorized) {
+    return next(new AppError("Not authorized", 403));
+   }
+
+   return next();
   });

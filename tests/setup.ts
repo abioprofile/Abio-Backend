@@ -24,6 +24,14 @@ vi.mock("@/queues/queue", () => ({
 async function resetDatabase() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      "admin_audit_logs",
+      "admin_invites",
+      "payments",
+      "astore_order_items",
+      "astore_orders",
+      "astore_product_variants",
+      "astore_products",
+      "verification_badges",
       "refresh_tokens",
       "links",
       "display_preferences",
@@ -52,7 +60,7 @@ beforeAll(() => {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      execSync("npx prisma db push --skip-generate", {
+      execSync("prisma db push --skip-generate --accept-data-loss", {
         stdio: "pipe",
         env,
       });

@@ -23,7 +23,7 @@ import passport from "passport";
 import themesRouter from "@/modules/themes/themes.routes";
 import { requestLogger } from "@/shared/middleware/requestLogger";
 import { setupSwagger } from "@/docs/swagger";
-
+import adminRouter from "@/modules/admin/admin.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -67,7 +67,7 @@ router.use("/public", publicRouter);
 app.use("/api/v1", router);
 
 app.use("/api/v1/themes", themesRouter);
-
+app.use("/api/v1/admin", adminRouter);
 app.get("/health", (_req, res) => {
 	res.json({
 		status: "ok",

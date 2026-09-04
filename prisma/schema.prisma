@@ -7,6 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProductType {
+  standard
+  custom
+}
+
+enum OrderStatus {
+  processing
+  ready
+  shipped
+  received
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+  reversed
+}
+
+enum PaymentProvider {
+  bach
+  paystack
+  opay
+}
+
+enum AdminInviteRole {
+  moderator
+}
+
 model Waitlist {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -37,8 +67,16 @@ model User {
   googleId                 String?
   totp_secret              String?
 
-  roles         UserRole[]
-  refreshTokens RefreshToken[]
+  roles                    UserRole[]
+  refreshTokens            RefreshToken[]
+  verificationBadges       VerificationBadge[] @relation("BadgeOwner")
+  badgesAssigned           VerificationBadge[] @relation("BadgeAssignedBy")
+  badgesRevoked            VerificationBadge[] @relation("BadgeRevokedBy")
+  astoreOrders             AStoreOrder[]
+  payments                 Payment[]
+  adminInvitesSent         AdminInvite[]       @relation("AdminInvitesSent")
+  adminInviteAccepted      AdminInvite[]       @relation("AdminInviteAccepted")
+  adminAuditLogs           AdminAuditLog[]
 
   @@map("users")
 }
@@ -159,5 +197,171 @@ model UserRole {
   user   User   @relation(fields: [userId], references: [id])
   role   Role   @relation(fields: [roleId], references: [id])
 
+  @@unique([userId, roleId])
   @@map("user_roles")
+}
+
+model VerificationBadge {
+  id           String    @id @default(uuid())
+  userId       String
+  assignedById String
+  assignedAt   DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt    DateTime? @db.Timestamptz(6)
+  revokedById  String?
+  revokeReason String?
+  /** e.g. "verified" — one row per (user, type); re-assign clears revokedAt on same row */
+  badgeType    String    @default("verified")
+
+  user       User  @relation("BadgeOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy User  @relation("BadgeAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  revokedBy  User? @relation("BadgeRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, badgeType])
+  @@index([userId])
+  @@map("verification_badges")
+}
+
+model AStoreProduct {
+  id            String                 @id @default(uuid())
+  name          String
+  slug          String                 @unique
+  description   String?
+  active        Boolean                @default(true)
+  type          ProductType
+  currency      String                 @default("NGN")
+  basePriceKobo Int
+  createdAt     DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime               @updatedAt @db.Timestamptz(6)
+  variants      AStoreProductVariant[]
+  orderItems    AStoreOrderItem[]
+
+  @@map("astore_products")
+}
+
+model AStoreProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  colorName String
+  colorHex  String?
+  imageUrls String[]
+  stockQty  Int      @default(0)
+  priceKobo Int?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  product    AStoreProduct     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems AStoreOrderItem[]
+
+  @@unique([productId, colorName])
+  @@index([productId])
+  @@map("astore_product_variants")
+}
+
+model AStoreOrder {
+  id              String      @id @default(uuid())
+  userId          String
+  status          OrderStatus @default(processing)
+  totalAmountKobo Int
+  currency        String      @default("NGN")
+  trackingNumber  String?
+  shippingAddress String?
+  createdAt       DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @db.Timestamptz(6)
+
+  items   AStoreOrderItem[]
+  payment Payment?
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("astore_orders")
+}
+
+model AStoreOrderItem {
+  id             String         @id @default(uuid())
+  orderId        String
+  productId      String
+  variantId      String?
+  quantity       Int
+  unitPriceKobo  Int
+  customUsername String?
+  preferredColor String?
+  instructions   String?
+  artworkUrl     String?
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(6)
+
+  // Order history should survive catalog edits:
+  // - deleting a color → clear variantId (SetNull)
+  // - deleting a product still sold in past orders → blocked (Restrict)
+  variant AStoreProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  product AStoreProduct         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order   AStoreOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("astore_order_items")
+}
+
+model Payment {
+  id          String          @id @default(uuid())
+  orderId     String          @unique
+  userId      String
+  provider    PaymentProvider @default(bach)
+  providerRef String?         @unique
+  amountKobo  Int
+  currency    String          @default("NGN")
+  status      PaymentStatus   @default(pending)
+  rawWebhook  Json?
+  paidAt      DateTime?       @db.Timestamptz(6)
+  failedAt    DateTime?       @db.Timestamptz(6)
+  reversedAt  DateTime?       @db.Timestamptz(6)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @db.Timestamptz(6)
+
+  order       AStoreOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+model AdminInvite {
+  id              String          @id @default(uuid())
+  email           String
+  role            AdminInviteRole
+  tokenHash       String          @unique
+  invitedById     String          
+  expiresAt       DateTime        @db.Timestamptz(6)
+  acceptedAt      DateTime?       @db.Timestamptz(6)
+  acceptedUserId  String?         
+  createdAt       DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(6)
+
+  invitedBy       User            @relation("AdminInvitesSent", fields: [invitedById], references: [id], onDelete: Restrict)
+  acceptedUser    User?           @relation("AdminInviteAccepted", fields: [acceptedUserId], references: [id], onDelete: SetNull)
+
+  @@map("admin_invites")
+  @@index([email])
+}
+
+model AdminAuditLog {
+  id              String          @id @default(uuid())
+  adminId         String
+  action          String
+  resourceType    String
+  resourceId      String
+  oldValue        Json?
+  newValue        Json?
+  metadata        Json?
+  createdAt       DateTime        @default(now()) @db.Timestamptz(6)
+  admin           User            @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+
+  @@map("admin_audit_logs")
 }

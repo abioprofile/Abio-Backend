@@ -9,7 +9,7 @@ themesRouter.get("/", authenticate, themesController.index);
 themesRouter.post(
   "/",
   authenticate,
-  hasRole("admin"),
+  hasRole(["admin", "moderator"]),
   uploadImage.single("wallpaper_config[image]"),
   themesController.store
 );

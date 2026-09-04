@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
     "worker:email": "tsx src/queues/email.worker.ts | pino-pretty",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -107,5 +108,8 @@
     "splitting": false,
     "sourcemap": true,
     "clean": true
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
