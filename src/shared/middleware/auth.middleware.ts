@@ -81,6 +81,16 @@ export const authenticate = catchAsync(
       );
     }
 
+    // 3b) Reject deactivated accounts (existing JWTs must stop working)
+    if (!currentUser.active) {
+      return next(
+        new AppError(
+          "Your account has been deactivated. Contact support.",
+          401,
+        ),
+      );
+    }
+
     // 4) Check if user changed password after the token was issued
     if (decoded.iat && currentUser.passwordChangedAt) {
       const changedTimestamp =

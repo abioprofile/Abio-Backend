@@ -249,4 +249,109 @@ describe("Admin API", () => {
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
+
+  it("rejects normal user PATCH /admin/users/:id with 403", async () => {
+    const target = await createTestUser({ name: "Patch Target" });
+    const res = await testApp
+      .patch(`${ADMIN_USERS}/${target.id}`)
+      .set(userHeaders)
+      .send({ active: false });
+    expect(res.status).toBe(403);
+  });
+
+  it("deactivates a user and writes an audit log", async () => {
+    const target = await createTestUser({
+      name: "To Deactivate",
+      email: "deactivate-me@test.abio.local",
+    });
+
+    const res = await testApp
+      .patch(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders)
+      .send({ active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      id: target.id,
+      active: false,
+      email: target.email,
+      name: "To Deactivate",
+    });
+    expect(res.body.data).not.toHaveProperty("password");
+
+    const dbUser = await prisma.user.findUnique({ where: { id: target.id } });
+    expect(dbUser?.active).toBe(false);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: {
+        adminId: adminId,
+        resourceType: "user",
+        resourceId: target.id,
+        action: "user.deactivate",
+      },
+    });
+    expect(audit).toBeTruthy();
+    expect(audit?.oldValue).toEqual({ active: true });
+    expect(audit?.newValue).toEqual({ active: false });
+  });
+
+  it("reactivates a deactivated user", async () => {
+    const target = await createTestUser({ name: "To Reactivate" });
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { active: false },
+    });
+
+    const res = await testApp
+      .patch(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders)
+      .send({ active: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.active).toBe(true);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: {
+        resourceId: target.id,
+        action: "user.reactivate",
+      },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("rejects admin updating their own account", async () => {
+    const res = await testApp
+      .patch(`${ADMIN_USERS}/${adminId}`)
+      .set(adminHeaders)
+      .send({ active: false });
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("returns 404 when patching unknown user", async () => {
+    const res = await testApp
+      .patch(`${ADMIN_USERS}/00000000-0000-4000-8000-000000000099`)
+      .set(adminHeaders)
+      .send({ active: false });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("blocks deactivated user JWT on protected routes", async () => {
+    const target = await createTestUser({ name: "Inactive Token User" });
+
+    await testApp
+      .patch(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders)
+      .send({ active: false });
+
+    const res = await testApp
+      .get("/api/v1/user/profile")
+      .set(authHeader(target.id));
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
 });

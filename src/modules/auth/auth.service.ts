@@ -123,6 +123,13 @@ export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
     );
   }
 
+  if (!user.active) {
+    throw new AppError(
+      "Your account has been deactivated. Contact support.",
+      StatusCodes.FORBIDDEN
+    );
+  }
+
   const { password: _, ...userWithoutPassword } = user;
   const tokens = await issueAuthTokens(user.id);
 

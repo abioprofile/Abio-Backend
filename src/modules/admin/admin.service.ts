@@ -6,7 +6,7 @@ import {
     getTotalPages,
 } from "@/shared/utils/pagination";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
-import type { TListUsersQuery } from "./admin.schemas";
+import type { TListUsersQuery, TUpdateUserBody } from "./admin.schemas";
 
 /** GET /api/v1/admin/me — small admin identity payload */
 export const getMe = async (userId: string) => {
@@ -135,36 +135,73 @@ export const listUsers = async (query: TListUsersQuery) => {
 
 /** GET /api/v1/admin/users/:id — full user detail for staff */
 export const getUserById = async (id: string) => {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+            active: true,
+            isEmailVerified: true,
+            createdAt: true,
+            roles: { select: { role: { select: { name: true } } } },
+            profile: {
+                select: {
+                    username: true,
+                    avatarUrl: true,
+                    bio: true,
+                    isPublic: true,
+                    location: true,
+                },
+            },
+            verificationBadges: {
+                orderBy: { assignedAt: "desc" },
+                select: {
+                    id: true,
+                    badgeType: true,
+                    assignedAt: true,
+                    revokedAt: true,
+                    revokeReason: true,
+                },
+            },
+        },
+    });
+
+    if (!user) {
+        return ServiceResponse.failure(
+            "User not found",
+            null,
+            StatusCodes.NOT_FOUND
+        );
+    }
+
+    const activeBadges = user.verificationBadges.filter(
+        (b) => b.revokedAt === null
+    );
+
+    return ServiceResponse.success("User details retrieved successfully", {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        active: user.active,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+        roles: user.roles.map(({ role }) => role.name),
+        profile: user.profile,
+        hasBadge: activeBadges.length > 0,
+        badges: user.verificationBadges,
+    });
+};
+
+/** PATCH /api/v1/admin/users/:id — deactivate / reactivate */
+export const updateUser = async (
+  targetId: string,
+  body: TUpdateUserBody,
+  actorId: string
+) => {
   const user = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      active: true,
-      isEmailVerified: true,
-      createdAt: true,
-      roles: { select: { role: { select: { name: true } } } },
-      profile: {
-        select: {
-          username: true,
-          avatarUrl: true,
-          bio: true,
-          isPublic: true,
-          location: true,
-        },
-      },
-      verificationBadges: {
-        orderBy: { assignedAt: "desc" },
-        select: {
-          id: true,
-          badgeType: true,
-          assignedAt: true,
-          revokedAt: true,
-          revokeReason: true,
-        },
-      },
-    },
+    where: { id: targetId },
+    select: { id: true, active: true },
   });
 
   if (!user) {
@@ -175,20 +212,44 @@ export const getUserById = async (id: string) => {
     );
   }
 
-  const activeBadges = user.verificationBadges.filter(
-    (b) => b.revokedAt === null
-  );
+  if (targetId === actorId) {
+    return ServiceResponse.failure(
+      "Cannot update your own account",
+      null,
+      StatusCodes.FORBIDDEN
+    );
+  }
 
-  return ServiceResponse.success("User details retrieved successfully", {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    active: user.active,
-    isEmailVerified: user.isEmailVerified,
-    createdAt: user.createdAt,
-    roles: user.roles.map(({ role }) => role.name),
-    profile: user.profile,
-    hasBadge: activeBadges.length > 0,
-    badges: user.verificationBadges,
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: targetId },
+      data: { active: body.active },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        active: true,
+        isEmailVerified: true,
+        createdAt: true,
+      },
+    });
+
+    await tx.adminAuditLog.create({
+      data: {
+        adminId: actorId,
+        action: body.active ? "user.reactivate" : "user.deactivate",
+        resourceType: "user",
+        resourceId: targetId,
+        oldValue: { active: user.active },
+        newValue: { active: body.active },
+      },
+    });
+
+    return updated;
   });
+
+  return ServiceResponse.success(
+    `User ${body.active ? "reactivated" : "deactivated"} successfully`,
+    updatedUser
+  );
 };

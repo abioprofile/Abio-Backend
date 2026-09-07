@@ -18,5 +18,15 @@ export const getUserByIdSchema = z.object({
   }),
 });
 
+export const updateUserSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z.object({
+    active: z.boolean(),
+  }),
+});
+
 export type TListUsersQuery = z.infer<typeof listUsersSchema>["query"];
 export type TGetUserByIdParams = z.infer<typeof getUserByIdSchema>["params"];
+export type TUpdateUserBody = z.infer<typeof updateUserSchema>["body"];
