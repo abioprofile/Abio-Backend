@@ -8,5 +8,6 @@ const requireStaff = [authenticate, hasRole(["admin", "moderator"])] as const;
 
 adminRouter.get("/me", ...requireStaff, adminController.getMe);
 adminRouter.get("/users", ...requireStaff, adminController.listUsers);
+adminRouter.get("/users/:id", ...requireStaff, adminController.getUserById);
 
 export default adminRouter;

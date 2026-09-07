@@ -12,4 +12,11 @@ export const listUsersSchema = z.object({
   }),
 });
 
+export const getUserByIdSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+});
+
 export type TListUsersQuery = z.infer<typeof listUsersSchema>["query"];
+export type TGetUserByIdParams = z.infer<typeof getUserByIdSchema>["params"];

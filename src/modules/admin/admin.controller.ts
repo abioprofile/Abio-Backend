@@ -6,7 +6,7 @@ import {
 } from "@/shared/utils/httpHandlers";
 import type { AuthenticatedRequest } from "@/shared/types/express";
 import * as adminService from "./admin.service";
-import { listUsersSchema } from "./admin.schemas";
+import { listUsersSchema, getUserByIdSchema } from "./admin.schemas";
 
 export const getMe = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -20,3 +20,11 @@ export const listUsers = catchAsync(async (req: AuthenticatedRequest, res: Respo
   const serviceResponse = await adminService.listUsers(query);
   return handleServiceResponse(serviceResponse, res);
 });
+
+export const getUserById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params } = parseRequest(getUserByIdSchema, req);
+    const serviceResponse = await adminService.getUserById(params.id);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);

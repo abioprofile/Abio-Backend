@@ -155,4 +155,98 @@ describe("Admin API", () => {
       no.body.data.users.every((u: { hasBadge: boolean }) => !u.hasBadge)
     ).toBe(true);
   });
+
+  it("rejects unauthenticated GET /admin/users/:id", async () => {
+    const target = await createTestUser({ name: "Detail Target" });
+    const res = await testApp.get(`${ADMIN_USERS}/${target.id}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects normal user GET /admin/users/:id with 403", async () => {
+    const target = await createTestUser({ name: "Detail Target" });
+    const res = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(userHeaders);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns user detail for admin (200)", async () => {
+    const target = await createTestUser({
+      name: "Detail Alice",
+      email: "detail-alice@test.abio.local",
+    });
+    await prisma.verificationBadge.create({
+      data: {
+        userId: target.id,
+        assignedById: adminId,
+        badgeType: "verified",
+      },
+    });
+
+    const res = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      id: target.id,
+      email: target.email,
+      name: "Detail Alice",
+      active: true,
+      isEmailVerified: true,
+      hasBadge: true,
+    });
+    expect(res.body.data.roles).toEqual([]);
+    expect(res.body.data.profile).toMatchObject({
+      username: target.profile!.username,
+    });
+    expect(res.body.data.badges).toHaveLength(1);
+    expect(res.body.data.badges[0]).toMatchObject({
+      badgeType: "verified",
+      revokedAt: null,
+    });
+    expect(res.body.data).not.toHaveProperty("password");
+  });
+
+  it("treats revoked-only badges as hasBadge false", async () => {
+    const target = await createTestUser({ name: "Revoked Badge User" });
+    await prisma.verificationBadge.create({
+      data: {
+        userId: target.id,
+        assignedById: adminId,
+        badgeType: "verified",
+        revokedAt: new Date(),
+        revokedById: adminId,
+        revokeReason: "test revoke",
+      },
+    });
+
+    const res = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.hasBadge).toBe(false);
+    expect(res.body.data.badges).toHaveLength(1);
+    expect(res.body.data.badges[0].revokedAt).not.toBeNull();
+  });
+
+  it("returns 404 for unknown user id", async () => {
+    const res = await testApp
+      .get(`${ADMIN_USERS}/00000000-0000-4000-8000-000000000099`)
+      .set(adminHeaders);
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("returns 400 for invalid user id", async () => {
+    const res = await testApp
+      .get(`${ADMIN_USERS}/not-a-uuid`)
+      .set(adminHeaders);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
 });
