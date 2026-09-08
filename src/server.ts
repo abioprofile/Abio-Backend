@@ -28,6 +28,7 @@ import astoreRouter from "@/modules/astore/astore.routes";
 import astorePublicRouter from "@/modules/astore/astore.public.routes";
 import cartRouter from "@/modules/cart/cart.routes";
 import ordersRouter from "@/modules/orders/orders.routes";
+import paymentsWebhookRouter from "@/modules/payments/payments.webhook.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -40,6 +41,9 @@ app.set("trust proxy", true);
 // Set up Pug as view engine
 app.set("view engine", "pug");
 app.set("views", path.join(process.cwd(), "views"));
+
+// Bachs webhooks need the raw body for HMAC — mount before express.json()
+app.use("/api/v1/payments/webhooks", paymentsWebhookRouter);
 
 // Middlewares
 app.use(express.json());

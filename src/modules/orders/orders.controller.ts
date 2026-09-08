@@ -41,3 +41,14 @@ export const getMyOrderById = catchAsync(
     return handleServiceResponse(serviceResponse, res);
   }
 );
+
+export const startPayment = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params } = parseRequest(orderIdParamSchema, req);
+    const serviceResponse = await ordersService.startPayment(
+      req.user!.id,
+      params.id
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);

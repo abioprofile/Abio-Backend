@@ -48,6 +48,19 @@ const envSchema = z
     REDIS_URL: z.string().url(),
     TOTP_SECRET: z.string(),
     LOG_LEVEL: z.string().default("info"),
+    /** Bachs sandbox/live secret (`sk_sandbox_...` / `sk_live_...`). Optional in test. */
+    BACH_SECRET_KEY: z.string().optional(),
+    BACHS_BASE_URL: z
+      .string()
+      .url()
+      .default("https://sandbox-api.bachs.io"),
+    /**
+     * Public HTTPS origin for Bachs success/cancel redirects.
+     * Bachs rejects localhost — use e.g. https://abio.site while testing locally.
+     */
+    BACHS_RETURN_BASE_URL: z.string().url().optional(),
+    /** Per-destination signing secret from Bachs webhook portal */
+    BACHS_WEBHOOK_SECRET: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.EMAIL_PROVIDER === "brevo") {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { testApp } from "../helpers/testApp";
 import {
@@ -18,6 +18,19 @@ describe("Orders API", () => {
   let variantId: string;
 
   beforeEach(async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          checkout_id: "chk_test_123",
+          checkout_url: "https://checkout.bachs.io/c/test",
+          status: "open",
+          reference: null,
+        }),
+      })
+    );
+
     const user = await createTestUser();
     const admin = await createAdminUser({ name: "Orders Admin" });
     userHeaders = authHeader(user.id);
@@ -44,6 +57,10 @@ describe("Orders API", () => {
     variantId = variant.body.data.id;
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("rejects checkout with empty cart", async () => {
     const res = await testApp
       .post(`${ORDERS}/checkout`)
@@ -52,7 +69,9 @@ describe("Orders API", () => {
     expect(res.status).toBe(400);
   });
 
-  it("checks out cart into order + pending payment and clears cart", async () => {
+  it("checks out cart into order + Bachs checkout URL and clears cart", async () => {
+    process.env.BACH_SECRET_KEY = "sk_sandbox_test";
+
     await testApp
       .post(`${CART}/items`)
       .set(userHeaders)
@@ -68,12 +87,14 @@ describe("Orders API", () => {
       status: "processing",
       totalAmountKobo: 840000,
       shippingAddress: "12 Admiralty Way, Lagos",
+      checkoutUrl: "https://checkout.bachs.io/c/test",
     });
     expect(res.body.data.items).toHaveLength(1);
     expect(res.body.data.payment).toMatchObject({
       status: "pending",
       amountKobo: 840000,
       provider: "bach",
+      providerRef: "chk_test_123",
     });
 
     const cart = await testApp.get(CART).set(userHeaders);
@@ -83,9 +104,13 @@ describe("Orders API", () => {
       where: { id: variantId },
     });
     expect(variant?.stockQty).toBe(3);
+
+    expect(fetch).toHaveBeenCalled();
   });
 
   it("lists and gets my orders", async () => {
+    process.env.BACH_SECRET_KEY = "sk_sandbox_test";
+
     await testApp
       .post(`${CART}/items`)
       .set(userHeaders)

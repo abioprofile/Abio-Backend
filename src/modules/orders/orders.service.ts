@@ -1,10 +1,12 @@
 import { StatusCodes } from "http-status-codes";
+import env from "@/env";
 import { prisma } from "@/shared/config/database";
 import {
   getPagination,
   getTotalPages,
 } from "@/shared/utils/pagination";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
+import { createBachsCheckoutSession } from "@/modules/payments/bachs.client";
 import type { TCheckoutBody, TListOrdersQuery } from "./orders.schemas";
 
 const orderInclude = {
@@ -34,6 +36,7 @@ const orderInclude = {
       id: true,
       status: true,
       provider: true,
+      providerRef: true,
       amountKobo: true,
       currency: true,
       paidAt: true,
@@ -42,7 +45,39 @@ const orderInclude = {
   },
 } as const;
 
-/** POST /api/v1/orders/checkout — cart → order + pending payment */
+const attachBachsCheckout = async (order: {
+  id: string;
+  totalAmountKobo: number;
+  currency: string;
+  payment: { id: string; providerRef: string | null } | null;
+  user: { email: string; name: string };
+}) => {
+  if (!order.payment) {
+    throw new Error("Order has no payment row");
+  }
+
+  const returnBase = env.BACHS_RETURN_BASE_URL || env.CLIENT_URL;
+
+  const session = await createBachsCheckoutSession({
+    amountKobo: order.totalAmountKobo,
+    currency: order.currency,
+    customerEmail: order.user.email,
+    customerName: order.user.name,
+    orderId: order.id,
+    paymentId: order.payment.id,
+    successUrl: `${returnBase}/orders/${order.id}?paid=1`,
+    cancelUrl: `${returnBase}/orders/${order.id}?cancelled=1`,
+  });
+
+  await prisma.payment.update({
+    where: { id: order.payment.id },
+    data: { providerRef: session.checkoutId },
+  });
+
+  return session;
+};
+
+/** POST /api/v1/orders/checkout — cart → order + pending payment + Bachs URL */
 export const checkout = async (userId: string, body: TCheckoutBody) => {
   const cart = await prisma.cart.findUnique({
     where: { userId },
@@ -64,7 +99,6 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
     );
   }
 
-  // Validate lines before opening the write transaction
   for (const item of cart.items) {
     if (!item.product.active) {
       return ServiceResponse.failure(
@@ -92,6 +126,19 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
     }
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) {
+    return ServiceResponse.failure(
+      "User not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
   try {
     const order = await prisma.$transaction(async (tx) => {
       const currency = cart.items[0]?.product.currency ?? "NGN";
@@ -113,7 +160,6 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
         };
       });
 
-      // Reserve stock (atomic where possible)
       for (const item of cart.items) {
         if (!item.variantId) continue;
 
@@ -157,9 +203,37 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
       return created;
     });
 
+    let checkoutUrl: string | null = null;
+    let paymentInitError: string | null = null;
+
+    try {
+      const session = await attachBachsCheckout({
+        id: order.id,
+        totalAmountKobo: order.totalAmountKobo,
+        currency: order.currency,
+        payment: order.payment,
+        user,
+      });
+      checkoutUrl = session?.checkoutUrl ?? null;
+    } catch (err) {
+      paymentInitError =
+        err instanceof Error ? err.message : "Failed to start Bachs checkout";
+    }
+
+    const refreshed = await prisma.aStoreOrder.findUnique({
+      where: { id: order.id },
+      include: orderInclude,
+    });
+
     return ServiceResponse.success(
-      "Order placed successfully",
-      order,
+      paymentInitError
+        ? "Order placed, but payment link could not be created yet"
+        : "Order placed successfully",
+      {
+        ...refreshed,
+        checkoutUrl,
+        paymentInitError,
+      },
       StatusCodes.CREATED
     );
   } catch (err) {
@@ -172,6 +246,67 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
       );
     }
     throw err;
+  }
+};
+
+/** POST /api/v1/orders/:id/pay — (re)start Bachs checkout for a pending payment */
+export const startPayment = async (userId: string, orderId: string) => {
+  const order = await prisma.aStoreOrder.findFirst({
+    where: { id: orderId, userId },
+    include: {
+      ...orderInclude,
+      user: { select: { email: true, name: true } },
+    },
+  });
+
+  if (!order) {
+    return ServiceResponse.failure(
+      "Order not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (!order.payment) {
+    return ServiceResponse.failure(
+      "Order has no payment",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  if (order.payment.status !== "pending") {
+    return ServiceResponse.failure(
+      "Payment is not pending",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  try {
+    const session = await attachBachsCheckout({
+      id: order.id,
+      totalAmountKobo: order.totalAmountKobo,
+      currency: order.currency,
+      payment: order.payment,
+      user: order.user,
+    });
+
+    const refreshed = await prisma.aStoreOrder.findUnique({
+      where: { id: order.id },
+      include: orderInclude,
+    });
+
+    return ServiceResponse.success("Payment session created", {
+      ...refreshed,
+      checkoutUrl: session.checkoutUrl,
+    });
+  } catch (err) {
+    return ServiceResponse.failure(
+      err instanceof Error ? err.message : "Failed to start payment",
+      null,
+      StatusCodes.BAD_GATEWAY
+    );
   }
 };
 
