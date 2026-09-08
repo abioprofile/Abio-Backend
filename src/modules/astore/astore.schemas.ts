@@ -95,8 +95,55 @@ export const updateVariantSchema = z.object({
     }),
 });
 
+const orderStatusSchema = z.enum([
+  "processing",
+  "ready",
+  "shipped",
+  "received",
+  "cancelled",
+]);
+
+const paymentStatusSchema = z.enum([
+  "pending",
+  "success",
+  "failed",
+  "reversed",
+]);
+
+export const listOrdersSchema = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    status: orderStatusSchema.optional(),
+    paymentStatus: paymentStatusSchema.optional(),
+    q: z.string().trim().min(1).optional(),
+  }),
+});
+
+export const orderIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+});
+
+export const updateOrderSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z
+    .object({
+      status: orderStatusSchema.optional(),
+      trackingNumber: z.string().trim().min(1).max(120).nullable().optional(),
+    })
+    .refine((b) => Object.keys(b).length > 0, {
+      message: "At least one field is required",
+    }),
+});
+
 export type TListProductsQuery = z.infer<typeof listProductsSchema>["query"];
 export type TCreateProductBody = z.infer<typeof createProductSchema>["body"];
 export type TUpdateProductBody = z.infer<typeof updateProductSchema>["body"];
 export type TCreateVariantBody = z.infer<typeof createVariantSchema>["body"];
 export type TUpdateVariantBody = z.infer<typeof updateVariantSchema>["body"];
+export type TListOrdersQuery = z.infer<typeof listOrdersSchema>["query"];
+export type TUpdateOrderBody = z.infer<typeof updateOrderSchema>["body"];

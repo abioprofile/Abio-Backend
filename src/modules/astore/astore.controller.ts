@@ -6,6 +6,7 @@ import {
 } from "@/shared/utils/httpHandlers";
 import type { AuthenticatedRequest } from "@/shared/types/express";
 import * as astoreService from "./astore.service";
+import * as astoreOrdersService from "./astore.orders.service";
 import {
   listProductsSchema,
   productIdParamSchema,
@@ -13,6 +14,9 @@ import {
   updateProductSchema,
   createVariantSchema,
   updateVariantSchema,
+  listOrdersSchema,
+  orderIdParamSchema,
+  updateOrderSchema,
 } from "./astore.schemas";
 
 export const listProducts = catchAsync(
@@ -72,6 +76,34 @@ export const updateVariant = catchAsync(
     const serviceResponse = await astoreService.updateVariant(
       params.id,
       params.variantId,
+      body,
+      req.user!.id
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const listOrders = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { query } = parseRequest(listOrdersSchema, req);
+    const serviceResponse = await astoreOrdersService.listOrders(query);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const getOrderById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params } = parseRequest(orderIdParamSchema, req);
+    const serviceResponse = await astoreOrdersService.getOrderById(params.id);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const updateOrder = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params, body } = parseRequest(updateOrderSchema, req);
+    const serviceResponse = await astoreOrdersService.updateOrder(
+      params.id,
       body,
       req.user!.id
     );
