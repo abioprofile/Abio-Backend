@@ -13,6 +13,7 @@ import type {
   TUpdateProductBody,
   TUpdateVariantBody,
 } from "./astore.schemas";
+import type { TListPublicProductsQuery } from "./astore.public.schemas";
 
 const productSelect = {
   id: true,
@@ -371,4 +372,96 @@ export const updateVariant = async (
     }
     throw err;
   }
+};
+
+/** Public catalog — only active products + active variants */
+const publicProductSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  description: true,
+  type: true,
+  currency: true,
+  basePriceKobo: true,
+  createdAt: true,
+  variants: {
+    where: { active: true },
+    orderBy: { createdAt: "asc" as const },
+    select: {
+      id: true,
+      colorName: true,
+      colorHex: true,
+      imageUrls: true,
+      stockQty: true,
+      priceKobo: true,
+    },
+  },
+} satisfies Prisma.AStoreProductSelect;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** GET /api/v1/astore/products */
+export const listPublicProducts = async (query: TListPublicProductsQuery) => {
+  const { page, limit, skip } = getPagination(query as Record<string, unknown>);
+
+  const where: Prisma.AStoreProductWhereInput = {
+    active: true,
+  };
+
+  if (query.type) {
+    where.type = query.type;
+  }
+
+  if (query.q) {
+    where.OR = [
+      { name: { contains: query.q, mode: "insensitive" } },
+      { slug: { contains: query.q, mode: "insensitive" } },
+      { description: { contains: query.q, mode: "insensitive" } },
+    ];
+  }
+
+  const [total, products] = await Promise.all([
+    prisma.aStoreProduct.count({ where }),
+    prisma.aStoreProduct.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: publicProductSelect,
+    }),
+  ]);
+
+  return ServiceResponse.success("Products retrieved successfully", {
+    products,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: getTotalPages(total, limit),
+    },
+  });
+};
+
+/** GET /api/v1/astore/products/:idOrSlug */
+export const getPublicProduct = async (idOrSlug: string) => {
+  const where: Prisma.AStoreProductWhereInput = {
+    active: true,
+    ...(UUID_RE.test(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }),
+  };
+
+  const product = await prisma.aStoreProduct.findFirst({
+    where,
+    select: publicProductSelect,
+  });
+
+  if (!product) {
+    return ServiceResponse.failure(
+      "Product not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  return ServiceResponse.success("Product retrieved successfully", product);
 };
