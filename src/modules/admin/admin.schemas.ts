@@ -27,6 +27,45 @@ export const updateUserSchema = z.object({
   }),
 });
 
+export const assignBadgeSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+  body: z
+    .object({
+      badgeType: z.literal("verified").default("verified"),
+    })
+    .default({}),
+});
+
+export const revokeBadgeSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+    badgeType: z.literal("verified"),
+  }),
+  body: z
+    .object({
+      reason: z.string().trim().min(1).max(500).optional(),
+    })
+    .default({}),
+});
+
+export const createInviteSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email().toLowerCase(),
+  }),
+});
+
+export const acceptInviteSchema = z.object({
+  body: z.object({
+    token: z.string().trim().min(1),
+  }),
+});
+
 export type TListUsersQuery = z.infer<typeof listUsersSchema>["query"];
 export type TGetUserByIdParams = z.infer<typeof getUserByIdSchema>["params"];
 export type TUpdateUserBody = z.infer<typeof updateUserSchema>["body"];
+export type TAssignBadgeBody = z.infer<typeof assignBadgeSchema>["body"];
+export type TRevokeBadgeBody = z.infer<typeof revokeBadgeSchema>["body"];
+export type TCreateInviteBody = z.infer<typeof createInviteSchema>["body"];
+export type TAcceptInviteBody = z.infer<typeof acceptInviteSchema>["body"];

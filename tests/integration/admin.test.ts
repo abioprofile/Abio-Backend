@@ -354,4 +354,206 @@ describe("Admin API", () => {
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
+
+  it("rejects normal user assigning a badge", async () => {
+    const target = await createTestUser({ name: "Badge Target" });
+    const res = await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges`)
+      .set(userHeaders)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it("assigns a verified badge (201)", async () => {
+    const target = await createTestUser({ name: "Badge Assign" });
+
+    const res = await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges`)
+      .set(adminHeaders)
+      .send({});
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      badgeType: "verified",
+      assignedById: adminId,
+      revokedAt: null,
+    });
+
+    const detail = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders);
+    expect(detail.body.data.hasBadge).toBe(true);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: {
+        action: "badge.assign",
+        resourceId: res.body.data.id,
+      },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("revokes an active badge with reason", async () => {
+    const target = await createTestUser({ name: "Badge Revoke" });
+    await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges`)
+      .set(adminHeaders)
+      .send({});
+
+    const res = await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges/verified/revoke`)
+      .set(adminHeaders)
+      .send({ reason: "policy violation" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.revokedAt).not.toBeNull();
+    expect(res.body.data.revokedById).toBe(adminId);
+    expect(res.body.data.revokeReason).toBe("policy violation");
+
+    const detail = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders);
+    expect(detail.body.data.hasBadge).toBe(false);
+    expect(detail.body.data.badges).toHaveLength(1);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: { action: "badge.revoke", resourceId: res.body.data.id },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("re-assigns a previously revoked badge", async () => {
+    const target = await createTestUser({ name: "Badge Regrant" });
+    await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges`)
+      .set(adminHeaders)
+      .send({});
+    await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges/verified/revoke`)
+      .set(adminHeaders)
+      .send({ reason: "temp" });
+
+    const res = await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges`)
+      .set(adminHeaders)
+      .send({ badgeType: "verified" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.revokedAt).toBeNull();
+    expect(res.body.data.revokeReason).toBeNull();
+
+    const detail = await testApp
+      .get(`${ADMIN_USERS}/${target.id}`)
+      .set(adminHeaders);
+    expect(detail.body.data.hasBadge).toBe(true);
+  });
+
+  it("returns 404 when revoking with no active badge", async () => {
+    const target = await createTestUser({ name: "No Badge" });
+    const res = await testApp
+      .post(`${ADMIN_USERS}/${target.id}/badges/verified/revoke`)
+      .set(adminHeaders)
+      .send({});
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when assigning badge to unknown user", async () => {
+    const res = await testApp
+      .post(`${ADMIN_USERS}/00000000-0000-4000-8000-000000000099/badges`)
+      .set(adminHeaders)
+      .send({});
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects moderator-less staff creating invites — normal user 403", async () => {
+    const res = await testApp
+      .post("/api/v1/admin/invites")
+      .set(userHeaders)
+      .send({ email: "mod@test.abio.local" });
+    expect(res.status).toBe(403);
+  });
+
+  it("creates a moderator invite (admin only)", async () => {
+    const res = await testApp
+      .post("/api/v1/admin/invites")
+      .set(adminHeaders)
+      .send({ email: "new-mod@test.abio.local" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({
+      email: "new-mod@test.abio.local",
+      role: "moderator",
+    });
+    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.inviteUrl).toContain(res.body.data.token);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: { action: "invite.create", resourceId: res.body.data.id },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("rejects inviting an existing staff email", async () => {
+    const res = await testApp
+      .post("/api/v1/admin/invites")
+      .set(adminHeaders)
+      .send({ email: adminEmail });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("accepts invite and grants moderator role", async () => {
+    const invitee = await createTestUser({
+      email: "accept-mod@test.abio.local",
+      name: "Future Mod",
+    });
+
+    const created = await testApp
+      .post("/api/v1/admin/invites")
+      .set(adminHeaders)
+      .send({ email: invitee.email });
+
+    const token = created.body.data.token as string;
+
+    const res = await testApp
+      .post("/api/v1/admin/invites/accept")
+      .set(authHeader(invitee.id))
+      .send({ token });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.role).toBe("moderator");
+
+    const me = await testApp
+      .get("/api/v1/admin/me")
+      .set(authHeader(invitee.id));
+    expect(me.status).toBe(200);
+    expect(me.body.data.roles).toContain("moderator");
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: { action: "invite.accept" },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("rejects accept when email does not match invite", async () => {
+    const invitee = await createTestUser({
+      email: "right-email@test.abio.local",
+    });
+    const other = await createTestUser({
+      email: "wrong-email@test.abio.local",
+    });
+
+    const created = await testApp
+      .post("/api/v1/admin/invites")
+      .set(adminHeaders)
+      .send({ email: invitee.email });
+
+    const res = await testApp
+      .post("/api/v1/admin/invites/accept")
+      .set(authHeader(other.id))
+      .send({ token: created.body.data.token });
+
+    expect(res.status).toBe(403);
+  });
 });
