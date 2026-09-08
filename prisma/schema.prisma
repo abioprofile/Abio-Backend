@@ -77,6 +77,7 @@ model User {
   adminInvitesSent         AdminInvite[]       @relation("AdminInvitesSent")
   adminInviteAccepted      AdminInvite[]       @relation("AdminInviteAccepted")
   adminAuditLogs           AdminAuditLog[]
+  cart                     Cart?
 
   @@map("users")
 }
@@ -234,6 +235,7 @@ model AStoreProduct {
   updatedAt     DateTime               @updatedAt @db.Timestamptz(6)
   variants      AStoreProductVariant[]
   orderItems    AStoreOrderItem[]
+  cartItems     CartItem[]
 
   @@map("astore_products")
 }
@@ -252,10 +254,47 @@ model AStoreProductVariant {
 
   product    AStoreProduct     @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems AStoreOrderItem[]
+  cartItems  CartItem[]
 
   @@unique([productId, colorName])
   @@index([productId])
   @@map("astore_product_variants")
+}
+
+/** One cart per logged-in user — source of truth for save-for-later */
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(6)
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id             String   @id @default(uuid())
+  cartId         String
+  productId      String
+  variantId      String?
+  quantity       Int      @default(1)
+  /** Custom product fields (optional) */
+  customUsername String?
+  preferredColor String?
+  instructions   String?
+  artworkUrl     String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  cart    Cart                 @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product AStoreProduct        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant AStoreProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([cartId])
+  @@index([productId])
+  @@map("cart_items")
 }
 
 model AStoreOrder {

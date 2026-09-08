@@ -29,6 +29,8 @@ async function resetDatabase() {
       "payments",
       "astore_order_items",
       "astore_orders",
+      "cart_items",
+      "carts",
       "astore_product_variants",
       "astore_products",
       "verification_badges",
