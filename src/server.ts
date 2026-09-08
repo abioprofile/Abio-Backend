@@ -27,6 +27,7 @@ import adminRouter from "@/modules/admin/admin.routes";
 import astoreRouter from "@/modules/astore/astore.routes";
 import astorePublicRouter from "@/modules/astore/astore.public.routes";
 import cartRouter from "@/modules/cart/cart.routes";
+import ordersRouter from "@/modules/orders/orders.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -74,6 +75,7 @@ app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/admin/astore", astoreRouter);
 app.use("/api/v1/astore", astorePublicRouter);
 app.use("/api/v1/cart", cartRouter);
+app.use("/api/v1/orders", ordersRouter);
 app.get("/health", (_req, res) => {
 	res.json({
 		status: "ok",
