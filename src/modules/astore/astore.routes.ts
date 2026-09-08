@@ -28,6 +28,8 @@ astoreRouter.patch(
   astoreController.updateVariant
 );
 
+astoreRouter.get("/metrics", ...requireStaff, astoreController.getMetrics);
+
 astoreRouter.get("/orders", ...requireStaff, astoreController.listOrders);
 astoreRouter.get("/orders/:id", ...requireStaff, astoreController.getOrderById);
 astoreRouter.patch("/orders/:id", ...requireStaff, astoreController.updateOrder);

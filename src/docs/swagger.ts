@@ -1,6 +1,8 @@
 import swaggerUi from "swagger-ui-express";
 import type { Express } from "express";
 import env from "@/env";
+import { adminSchemas, adminPaths } from "./openapi/admin.openapi";
+import { commerceSchemas, commercePaths } from "./openapi/commerce.openapi";
 
 const swaggerDocument = {
   openapi: "3.0.0",
@@ -10,14 +12,29 @@ const swaggerDocument = {
     description: `
 Abio.site backend API.
 
+## Audiences (how tags are labeled)
+| Prefix | Who can call it |
+|--------|-----------------|
+| **Public —** | No auth (or health/waitlist/shop catalog) |
+| **User —** | Logged-in end user (JWT Bearer) |
+| **Admin —** | Staff: \`admin\` and/or \`moderator\` roles (some routes admin-only) |
+| **Payments —** | Server-to-server (Bachs webhooks) — not for browsers |
+
 ## Authentication
-Protected endpoints accept a Bearer JWT in the Authorization header:
+Protected endpoints accept a Bearer JWT:
 \`Authorization: Bearer <accessToken>\`
 
 Some auth flows also set \`access\` / \`logged_in\` cookies.
 
+**Staff** = roles \`admin\` or \`moderator\`.  
+**Admin-only** = \`admin\` (e.g. create moderator invite).
+
+## Money
+AStore amounts are stored and returned in **kobo** (integer minor units).  
+Example: \`500000\` kobo = ₦5,000.00. Bachs APIs use decimal strings (e.g. \`"5000.00"\`).
+
 ## Response shape
-All feature endpoints return a \`ServiceResponse\` envelope:
+Feature endpoints return a \`ServiceResponse\` envelope:
 \`{ success, message, data, statusCode }\`
 
 ## Passwords
@@ -35,14 +52,83 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
   ],
   tags: [
-    { name: "Auth", description: "Signup, login, password reset, OAuth, 2FA" },
-    { name: "Users", description: "Account (me, delete, update email)" },
-    { name: "Profiles", description: "Public/private profile and preferences" },
-    { name: "Links", description: "Link CRUD, reorder, click tracking" },
-    { name: "Themes", description: "Display themes" },
-    { name: "Waitlist", description: "Waitlist signup" },
-    { name: "Public", description: "Unauthenticated public endpoints (click tracking)" },
-    { name: "System", description: "Health check and system status" },
+    // Public
+    {
+      name: "Public — System",
+      description: "[Public] Health check and system status",
+    },
+    {
+      name: "Public — Waitlist",
+      description: "[Public] Waitlist signup",
+    },
+    {
+      name: "Public — Links",
+      description: "[Public] Unauthenticated link click tracking",
+    },
+    {
+      name: "Public — AStore",
+      description: "[Public] Shop catalog (active products only)",
+    },
+    // User
+    {
+      name: "User — Auth",
+      description: "[User] Signup, login, password reset, OAuth, 2FA",
+    },
+    {
+      name: "User — Account",
+      description: "[User] Account (me, delete, update email)",
+    },
+    {
+      name: "User — Profiles",
+      description: "[User] Profile and preferences",
+    },
+    {
+      name: "User — Links",
+      description: "[User] Link CRUD, reorder, icons",
+    },
+    {
+      name: "User — Themes",
+      description: "[User] Display themes",
+    },
+    {
+      name: "User — Cart",
+      description: "[User] Server-side shopping cart",
+    },
+    {
+      name: "User — Orders",
+      description: "[User] Checkout, pay, and own order history",
+    },
+    // Admin
+    {
+      name: "Admin — Staff",
+      description: "[Admin/Moderator] Current staff identity (`GET /admin/me`)",
+    },
+    {
+      name: "Admin — Users",
+      description: "[Admin/Moderator] User directory, activate/deactivate, badges",
+    },
+    {
+      name: "Admin — Invites",
+      description:
+        "[Admin] Create moderator invites; [User] accept invite for matching email",
+    },
+    {
+      name: "Admin — AStore Catalog",
+      description: "[Admin/Moderator] Product & variant management",
+    },
+    {
+      name: "Admin — AStore Orders",
+      description: "[Admin/Moderator] All orders, status & tracking updates",
+    },
+    {
+      name: "Admin — Dashboard",
+      description: "[Admin/Moderator] Store metrics aggregates",
+    },
+    // Payments
+    {
+      name: "Payments — Webhooks",
+      description: "[Server] Bachs payment webhooks (HMAC signed)",
+    },
   ],
   components: {
     securitySchemes: {
@@ -617,7 +703,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
   paths: {
     "/health": {
       get: {
-        tags: ["System"],
+        tags: ["Public — System"],
         summary: "API health check",
         description: "Public health check returning server status and timestamp.",
         responses: {
@@ -647,7 +733,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Auth ────────────────────────────────────────────────
     "/api/v1/auth/signup": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Sign up",
         requestBody: {
           required: true,
@@ -668,7 +754,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/login": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Log in with email and password",
         requestBody: {
           required: true,
@@ -691,7 +777,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/refresh": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Rotate refresh token and issue a new access token",
         description:
           "Send `refreshToken` in the body or the httpOnly `refresh` cookie. Old refresh token is invalidated (rotation).",
@@ -711,7 +797,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/logout": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Log out (clears cookies, blacklists access JWT, revokes refresh)",
         description:
           "Optional: send Bearer/access cookie to blacklist the JWT, and refresh body/cookie to revoke the refresh row.",
@@ -722,7 +808,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/forgot-password": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Request password reset email",
         requestBody: {
           required: true,
@@ -740,7 +826,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/reset-password": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Reset password with emailed link token",
         description:
           "Frontend route `/auth/reset-password/:token` extracts the token and POSTs it here with the new password.",
@@ -760,7 +846,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/update-password": {
       patch: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Change password while authenticated",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -779,7 +865,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/verify-email": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Verify email with link token",
         description:
           "Frontend route `/auth/:token` extracts the token and POSTs it here. On success, issues access + refresh and queues the welcome email.",
@@ -801,7 +887,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/resend-verification-email": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Resend email verification link",
         requestBody: {
           required: true,
@@ -820,7 +906,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/2fa/totp/activate": {
       get: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Activate TOTP 2FA",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
@@ -830,7 +916,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/auth/2fa/totp/verify": {
       post: {
-        tags: ["Auth"],
+        tags: ["User — Auth"],
         summary: "Verify TOTP code and log in",
         requestBody: {
           required: true,
@@ -849,7 +935,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Waitlist ────────────────────────────────────────────
     "/api/v1/waitlist": {
       post: {
-        tags: ["Waitlist"],
+        tags: ["Public — Waitlist"],
         summary: "Join the waitlist",
         requestBody: {
           required: true,
@@ -881,7 +967,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/waitlist/jzI27AUJTCKU": {
       get: {
-        tags: ["Waitlist"],
+        tags: ["Public — Waitlist"],
         summary: "List waitlist entries (obscured admin path)",
         responses: {
           "200": {
@@ -899,7 +985,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Users ───────────────────────────────────────────────
     "/api/v1/user": {
       get: {
-        tags: ["Users"],
+        tags: ["User — Account"],
         summary: "Get logged-in user",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
@@ -908,7 +994,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         },
       },
       delete: {
-        tags: ["Users"],
+        tags: ["User — Account"],
         summary: "Delete account",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -927,7 +1013,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/user/check-username": {
       get: {
-        tags: ["Users"],
+        tags: ["User — Account"],
         summary: "Check username availability",
         parameters: [
           {
@@ -951,13 +1037,13 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Profiles ────────────────────────────────────────────
     "/api/v1/user/profile": {
       get: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Get my profile",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: { "200": { description: "Profile" } },
       },
       patch: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Update my profile",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -973,7 +1059,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/user/profile/email": {
       patch: {
-        tags: ["Users"],
+        tags: ["User — Account"],
         summary: "Update account email (triggers re-verification)",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -991,7 +1077,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/user/profile/avatar": {
       patch: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Upload profile avatar",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -1015,7 +1101,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         responses: { "200": { description: "Avatar updated" } },
       },
       delete: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Remove profile avatar",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
@@ -1030,7 +1116,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/user/{username}": {
       get: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Get public profile by username",
         parameters: [
           {
@@ -1050,13 +1136,13 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Preferences ─────────────────────────────────────────
     "/api/v1/user/preferences": {
       get: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Get display preferences",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: { "200": { description: "Preferences" } },
       },
       put: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Save Changes — update appearance preferences",
         description:
           "Send font_config, corner_config, wallpaper_config, and/or selected_theme. Omitted sections are left unchanged.",
@@ -1074,7 +1160,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/user/preferences/wallpaper/image": {
       post: {
-        tags: ["Profiles"],
+        tags: ["User — Profiles"],
         summary: "Upload wallpaper image",
         description:
           "Returns { url }. Include that URL in PUT /preferences wallpaper_config when type is image.",
@@ -1100,7 +1186,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Themes ──────────────────────────────────────────────
     "/api/v1/themes": {
       get: {
-        tags: ["Themes"],
+        tags: ["User — Themes"],
         summary: "List display themes",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
@@ -1123,7 +1209,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         },
       },
       post: {
-        tags: ["Themes"],
+        tags: ["User — Themes"],
         summary: "Create a display theme (admin)",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -1170,7 +1256,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Links ───────────────────────────────────────────────
     "/api/v1/links": {
       get: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "List my links",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         responses: {
@@ -1193,7 +1279,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         },
       },
       post: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Create a link",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -1226,7 +1312,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/links/reorder/all": {
       patch: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Reorder links",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         requestBody: {
@@ -1251,7 +1337,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/links/{id}": {
       get: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Get link by id",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         parameters: [
@@ -1282,7 +1368,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         },
       },
       patch: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Update a link",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         parameters: [
@@ -1313,7 +1399,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         },
       },
       delete: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Delete a link",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         parameters: [
@@ -1338,7 +1424,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     "/api/v1/links/{id}/icon": {
       patch: {
-        tags: ["Links"],
+        tags: ["User — Links"],
         summary: "Upload link icon",
         security: [{ bearerAuth: [] }, { cookieAuth: [] }],
         parameters: [
@@ -1379,7 +1465,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
     // ── Public ──────────────────────────────────────────────
     "/api/v1/public/links/{id}/click": {
       post: {
-        tags: ["Public"],
+        tags: ["Public — Links"],
         summary: "Track a public link click",
         parameters: [
           {
@@ -1412,6 +1498,9 @@ In production, passwords must be at least 8 characters and include a letter, a n
   },
 };
 
+Object.assign(swaggerDocument.components.schemas, adminSchemas, commerceSchemas);
+Object.assign(swaggerDocument.paths, adminPaths, commercePaths);
+
 export const setupSwagger = (app: Express) => {
   app.use(
     "/api/v1/docs",
@@ -1421,6 +1510,10 @@ export const setupSwagger = (app: Express) => {
       customSiteTitle: "Abio API Documentation",
       swaggerOptions: {
         persistAuthorization: true,
+        tagsSorter: "alpha",
+        docExpansion: "list",
+        filter: true,
+        displayRequestDuration: true,
       },
     })
   );

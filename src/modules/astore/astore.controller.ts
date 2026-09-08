@@ -7,6 +7,7 @@ import {
 import type { AuthenticatedRequest } from "@/shared/types/express";
 import * as astoreService from "./astore.service";
 import * as astoreOrdersService from "./astore.orders.service";
+import * as astoreMetricsService from "./astore.metrics.service";
 import {
   listProductsSchema,
   productIdParamSchema,
@@ -79,6 +80,13 @@ export const updateVariant = catchAsync(
       body,
       req.user!.id
     );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const getMetrics = catchAsync(
+  async (_req: AuthenticatedRequest, res: Response) => {
+    const serviceResponse = await astoreMetricsService.getMetrics();
     return handleServiceResponse(serviceResponse, res);
   }
 );
