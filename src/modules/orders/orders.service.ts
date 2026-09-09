@@ -7,6 +7,10 @@ import {
 } from "@/shared/utils/pagination";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { createBachsCheckoutSession } from "@/modules/payments/bachs.client";
+import {
+  deliveryFeeKobo,
+  STORE_CURRENCY,
+} from "@/modules/astore/astore.commerce";
 import type { TCheckoutBody, TListOrdersQuery } from "./orders.schemas";
 
 const orderInclude = {
@@ -45,6 +49,15 @@ const orderInclude = {
   },
 } as const;
 
+const cartWithItemsInclude = {
+  items: {
+    include: {
+      product: true,
+      variant: true,
+    },
+  },
+} as const;
+
 const attachBachsCheckout = async (order: {
   id: string;
   totalAmountKobo: number;
@@ -79,53 +92,6 @@ const attachBachsCheckout = async (order: {
 
 /** POST /api/v1/orders/checkout — cart → order + pending payment + Bachs URL */
 export const checkout = async (userId: string, body: TCheckoutBody) => {
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
-    include: {
-      items: {
-        include: {
-          product: true,
-          variant: true,
-        },
-      },
-    },
-  });
-
-  if (!cart || cart.items.length === 0) {
-    return ServiceResponse.failure(
-      "Cart is empty",
-      null,
-      StatusCodes.BAD_REQUEST
-    );
-  }
-
-  for (const item of cart.items) {
-    if (!item.product.active) {
-      return ServiceResponse.failure(
-        `Product "${item.product.name}" is no longer available`,
-        null,
-        StatusCodes.CONFLICT
-      );
-    }
-
-    if (item.variantId) {
-      if (!item.variant || !item.variant.active) {
-        return ServiceResponse.failure(
-          `A selected option for "${item.product.name}" is unavailable`,
-          null,
-          StatusCodes.CONFLICT
-        );
-      }
-      if (item.variant.stockQty < item.quantity) {
-        return ServiceResponse.failure(
-          `Not enough stock for "${item.product.name}" (${item.variant.colorName})`,
-          null,
-          StatusCodes.CONFLICT
-        );
-      }
-    }
-  }
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, name: true },
@@ -139,20 +105,74 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
     );
   }
 
+  const shippingFeeKobo = deliveryFeeKobo(body.deliveryZone);
+
   try {
     const order = await prisma.$transaction(async (tx) => {
-      const currency = cart.items[0]?.product.currency ?? "NGN";
-      let totalAmountKobo = 0;
+      // Serialize concurrent checkouts for this user via cart row lock
+      const lockedCart = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM carts WHERE "userId" = ${userId} FOR UPDATE
+      `;
+
+      if (!lockedCart[0]) {
+        throw new Error("EMPTY_CART");
+      }
+
+      const cart = await tx.cart.findUnique({
+        where: { id: lockedCart[0].id },
+        include: cartWithItemsInclude,
+      });
+
+      if (!cart || cart.items.length === 0) {
+        throw new Error("EMPTY_CART");
+      }
+
+      for (const item of cart.items) {
+        if (!item.product.active) {
+          throw new Error(`UNAVAILABLE:${item.product.name}`);
+        }
+
+        if (item.product.currency !== STORE_CURRENCY) {
+          throw new Error("CURRENCY");
+        }
+
+        if (item.product.type === "standard") {
+          if (!item.variantId || !item.variant || !item.variant.active) {
+            throw new Error(`OPTION:${item.product.name}`);
+          }
+          if (item.variant.stockQty < item.quantity) {
+            throw new Error(`STOCK:${item.product.name}`);
+          }
+        }
+        // custom = made-to-order: no stock reservation
+      }
+
+      let subtotalKobo = 0;
 
       const lineData = cart.items.map((item) => {
         const unitPriceKobo =
-          item.variant?.priceKobo ?? item.product.basePriceKobo;
-        totalAmountKobo += unitPriceKobo * item.quantity;
+          item.product.type === "standard"
+            ? (item.variant?.priceKobo ?? item.product.basePriceKobo)
+            : item.product.basePriceKobo;
+        subtotalKobo += unitPriceKobo * item.quantity;
+
+        const variantImages = item.variant?.imageUrls ?? [];
+        const productImages = item.product.imageUrls ?? [];
+        const imageUrls =
+          variantImages.length > 0 ? variantImages : productImages;
+
         return {
           productId: item.productId,
-          variantId: item.variantId,
+          variantId:
+            item.product.type === "standard" ? item.variantId : null,
           quantity: item.quantity,
           unitPriceKobo,
+          productName: item.product.name,
+          productSlug: item.product.slug,
+          productType: item.product.type,
+          variantColorName: item.variant?.colorName ?? null,
+          variantColorHex: item.variant?.colorHex ?? null,
+          imageUrls,
           customUsername: item.customUsername,
           preferredColor: item.preferredColor,
           instructions: item.instructions,
@@ -160,8 +180,10 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
         };
       });
 
+      const totalAmountKobo = subtotalKobo + shippingFeeKobo;
+
       for (const item of cart.items) {
-        if (!item.variantId) continue;
+        if (item.product.type !== "standard" || !item.variantId) continue;
 
         const reserved = await tx.aStoreProductVariant.updateMany({
           where: {
@@ -181,15 +203,18 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
         data: {
           userId,
           status: "processing",
+          subtotalKobo,
+          shippingFeeKobo,
           totalAmountKobo,
-          currency,
+          deliveryZone: body.deliveryZone,
+          currency: STORE_CURRENCY,
           shippingAddress: body.shippingAddress,
           items: { create: lineData },
           payment: {
             create: {
               userId,
               amountKobo: totalAmountKobo,
-              currency,
+              currency: STORE_CURRENCY,
               provider: "bach",
               status: "pending",
             },
@@ -198,6 +223,7 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
         include: orderInclude,
       });
 
+      // Consuming the cart last: a second concurrent checkout will see empty cart
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
       return created;
@@ -237,13 +263,42 @@ export const checkout = async (userId: string, body: TCheckoutBody) => {
       StatusCodes.CREATED
     );
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith("STOCK:")) {
-      const name = err.message.slice("STOCK:".length);
-      return ServiceResponse.failure(
-        `Not enough stock for "${name}"`,
-        null,
-        StatusCodes.CONFLICT
-      );
+    if (err instanceof Error) {
+      if (err.message === "EMPTY_CART") {
+        return ServiceResponse.failure(
+          "Cart is empty",
+          null,
+          StatusCodes.BAD_REQUEST
+        );
+      }
+      if (err.message === "CURRENCY") {
+        return ServiceResponse.failure(
+          `Only ${STORE_CURRENCY} checkout is supported`,
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+      if (err.message.startsWith("STOCK:")) {
+        return ServiceResponse.failure(
+          `Not enough stock for "${err.message.slice("STOCK:".length)}"`,
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+      if (err.message.startsWith("UNAVAILABLE:")) {
+        return ServiceResponse.failure(
+          `Product "${err.message.slice("UNAVAILABLE:".length)}" is no longer available`,
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+      if (err.message.startsWith("OPTION:")) {
+        return ServiceResponse.failure(
+          `A selected option for "${err.message.slice("OPTION:".length)}" is unavailable`,
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
     }
     throw err;
   }
@@ -278,6 +333,14 @@ export const startPayment = async (userId: string, orderId: string) => {
   if (order.payment.status !== "pending") {
     return ServiceResponse.failure(
       "Payment is not pending",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  if (order.status === "cancelled") {
+    return ServiceResponse.failure(
+      "Order is cancelled",
       null,
       StatusCodes.CONFLICT
     );

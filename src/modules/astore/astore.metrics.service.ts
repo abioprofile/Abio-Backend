@@ -1,5 +1,8 @@
+import type { Prisma } from "@prisma/client";
+import { StatusCodes } from "http-status-codes";
 import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
+import type { TMetricsQuery } from "./astore.schemas";
 
 const ORDER_STATUSES = [
   "processing",
@@ -29,7 +32,40 @@ const zeroPaymentByStatus = () =>
   >;
 
 /** GET /api/v1/admin/astore/metrics — store ops dashboard aggregates */
-export const getMetrics = async () => {
+export const getMetrics = async (query: TMetricsQuery = {}) => {
+  const from = query.from ? new Date(query.from) : undefined;
+  const to = query.to ? new Date(query.to) : undefined;
+
+  if (from && Number.isNaN(from.getTime())) {
+    return ServiceResponse.failure(
+      "Invalid from date",
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  if (to && Number.isNaN(to.getTime())) {
+    return ServiceResponse.failure(
+      "Invalid to date",
+      null,
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  const createdAtFilter: Prisma.DateTimeFilter | undefined =
+    from || to
+      ? {
+          ...(from ? { gte: from } : {}),
+          ...(to ? { lte: to } : {}),
+        }
+      : undefined;
+
+  const orderWhere: Prisma.AStoreOrderWhereInput = createdAtFilter
+    ? { createdAt: createdAtFilter }
+    : {};
+  const paymentWhere: Prisma.PaymentWhereInput = createdAtFilter
+    ? { createdAt: createdAtFilter }
+    : {};
+
   const [
     orderGroups,
     paymentGroups,
@@ -42,14 +78,16 @@ export const getMetrics = async () => {
   ] = await Promise.all([
     prisma.aStoreOrder.groupBy({
       by: ["status"],
+      where: orderWhere,
       _count: { _all: true },
     }),
     prisma.payment.groupBy({
       by: ["status"],
+      where: paymentWhere,
       _count: { _all: true },
     }),
     prisma.payment.aggregate({
-      where: { status: "success" },
+      where: { status: "success", ...paymentWhere },
       _sum: { amountKobo: true },
     }),
     prisma.aStoreProduct.count(),
@@ -57,6 +95,7 @@ export const getMetrics = async () => {
     prisma.user.count(),
     prisma.user.count({ where: { active: true } }),
     prisma.aStoreOrder.findMany({
+      where: orderWhere,
       take: 5,
       orderBy: { createdAt: "desc" },
       select: {
@@ -94,6 +133,10 @@ export const getMetrics = async () => {
   }
 
   return ServiceResponse.success("Dashboard metrics retrieved successfully", {
+    range: {
+      from: from?.toISOString() ?? null,
+      to: to?.toISOString() ?? null,
+    },
     orders: {
       total: ordersTotal,
       byStatus: ordersByStatus,

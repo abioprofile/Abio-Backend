@@ -14,6 +14,8 @@ import type {
   TUpdateVariantBody,
 } from "./astore.schemas";
 import type { TListPublicProductsQuery } from "./astore.public.schemas";
+import { STORE_CURRENCY } from "./astore.commerce";
+import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 
 const productSelect = {
   id: true,
@@ -24,6 +26,7 @@ const productSelect = {
   type: true,
   currency: true,
   basePriceKobo: true,
+  imageUrls: true,
   createdAt: true,
   updatedAt: true,
   variants: {
@@ -52,14 +55,21 @@ const slugify = (name: string) =>
     .slice(0, 140) || "product";
 
 // Because two “Abio Tee”s can’t both be abio-tee
-const uniqueSlug = async (base: string) => {
+const uniqueSlug = async (
+  base: string,
+  excludeProductId?: string
+) => {
   let slug = base;
   let n = 2;
-  while (await prisma.aStoreProduct.findUnique({ where: { slug } })) {
+  while (true) {
+    const existing = await prisma.aStoreProduct.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!existing || existing.id === excludeProductId) return slug;
     slug = `${base}-${n}`.slice(0, 140);
     n += 1;
   }
-  return slug;
 };
 
 /** GET /api/v1/admin/astore/products */
@@ -133,8 +143,9 @@ export const createProduct = async (
         slug,
         description: body.description,
         type: body.type,
-        currency: body.currency ?? "NGN",
+        currency: STORE_CURRENCY,
         basePriceKobo: body.basePriceKobo,
+        imageUrls: body.imageUrls ?? [],
         active: body.active ?? true,
       },
       select: productSelect,
@@ -176,9 +187,11 @@ export const updateProduct = async (
     select: {
       id: true,
       name: true,
+      slug: true,
       active: true,
       basePriceKobo: true,
       type: true,
+      imageUrls: true,
     },
   });
 
@@ -190,19 +203,26 @@ export const updateProduct = async (
     );
   }
 
+  let nextSlug: string | undefined;
+  if (body.slug !== undefined) {
+    nextSlug = await uniqueSlug(body.slug, id);
+  }
+
   const product = await prisma.$transaction(async (tx) => {
     const updated = await tx.aStoreProduct.update({
       where: { id },
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
         ...(body.description !== undefined
           ? { description: body.description }
           : {}),
         ...(body.type !== undefined ? { type: body.type } : {}),
-        ...(body.currency !== undefined ? { currency: body.currency } : {}),
+        ...(body.currency !== undefined ? { currency: STORE_CURRENCY } : {}),
         ...(body.basePriceKobo !== undefined
           ? { basePriceKobo: body.basePriceKobo }
           : {}),
+        ...(body.imageUrls !== undefined ? { imageUrls: body.imageUrls } : {}),
         ...(body.active !== undefined ? { active: body.active } : {}),
       },
       select: productSelect,
@@ -223,6 +243,67 @@ export const updateProduct = async (
   });
 
   return ServiceResponse.success("Product updated successfully", product);
+};
+
+/** POST /api/v1/admin/astore/products/:id/images — multipart append to gallery */
+export const uploadProductImage = async (
+  productId: string,
+  fileBuffer: Buffer,
+  actorId: string,
+  mimetype?: string
+) => {
+  const existing = await prisma.aStoreProduct.findUnique({
+    where: { id: productId },
+    select: { id: true, imageUrls: true },
+  });
+
+  if (!existing) {
+    return ServiceResponse.failure(
+      "Product not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  if (existing.imageUrls.length >= 10) {
+    return ServiceResponse.failure(
+      "Product already has the maximum of 10 images",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  const { url, publicId } = await uploadToCloudinary(
+    fileBuffer,
+    "astore-products",
+    mimetype
+  );
+
+  const product = await prisma.$transaction(async (tx) => {
+    const updated = await tx.aStoreProduct.update({
+      where: { id: productId },
+      data: { imageUrls: { push: url } },
+      select: productSelect,
+    });
+
+    await tx.adminAuditLog.create({
+      data: {
+        adminId: actorId,
+        action: "astore.product.image.upload",
+        resourceType: "astore_product",
+        resourceId: productId,
+        newValue: { url, publicId },
+      },
+    });
+
+    return updated;
+  });
+
+  return ServiceResponse.success(
+    "Product image uploaded successfully",
+    { url, publicId, product },
+    StatusCodes.CREATED
+  );
 };
 
 /** POST /api/v1/admin/astore/products/:id/variants */
@@ -383,6 +464,7 @@ const publicProductSelect = {
   type: true,
   currency: true,
   basePriceKobo: true,
+  imageUrls: true,
   createdAt: true,
   variants: {
     where: { active: true },

@@ -195,4 +195,36 @@ describe("Admin Astore API", () => {
 
     expect(dup.status).toBe(409);
   });
+
+  it("updates product slug and imageUrls", async () => {
+    const created = await testApp
+      .post(`${ASTORE}/products`)
+      .set(adminHeaders)
+      .send({
+        name: "Slug Edit Tee",
+        type: "standard",
+        basePriceKobo: 100000,
+        imageUrls: ["https://cdn.example.com/p1.png"],
+      });
+
+    expect(created.status).toBe(201);
+    expect(created.body.data.imageUrls).toEqual([
+      "https://cdn.example.com/p1.png",
+    ]);
+
+    const updated = await testApp
+      .patch(`${ASTORE}/products/${created.body.data.id}`)
+      .set(adminHeaders)
+      .send({
+        slug: "slug-edit-tee-v2",
+        imageUrls: [
+          "https://cdn.example.com/p1.png",
+          "https://cdn.example.com/p2.png",
+        ],
+      });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.slug).toBe("slug-edit-tee-v2");
+    expect(updated.body.data.imageUrls).toHaveLength(2);
+  });
 });

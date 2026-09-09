@@ -13,6 +13,7 @@ import type {
   TRevokeBadgeBody,
   TCreateInviteBody,
   TAcceptInviteBody,
+  TListInvitesQuery,
 } from "./admin.schemas";
 import { createRawToken, hashRawToken } from "@/modules/auth/auth.tokens";
 import env from "@/env";
@@ -423,6 +424,60 @@ export const revokeBadge = async (
 };
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/** GET /api/v1/admin/invites */
+export const listInvites = async (query: TListInvitesQuery) => {
+  const { page, limit, skip } = getPagination(query as Record<string, unknown>);
+  const now = new Date();
+
+  const where: Prisma.AdminInviteWhereInput = {};
+  if (query.status === "accepted") {
+    where.acceptedAt = { not: null };
+  } else if (query.status === "pending") {
+    where.acceptedAt = null;
+    where.expiresAt = { gt: now };
+  } else if (query.status === "expired") {
+    where.acceptedAt = null;
+    where.expiresAt = { lte: now };
+  }
+
+  const [total, invites] = await Promise.all([
+    prisma.adminInvite.count({ where }),
+    prisma.adminInvite.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expiresAt: true,
+        acceptedAt: true,
+        createdAt: true,
+        invitedBy: { select: { id: true, name: true, email: true } },
+        acceptedUser: { select: { id: true, name: true, email: true } },
+      },
+    }),
+  ]);
+
+  const shaped = invites.map((invite) => {
+    let status: "pending" | "accepted" | "expired" = "pending";
+    if (invite.acceptedAt) status = "accepted";
+    else if (invite.expiresAt.getTime() <= now.getTime()) status = "expired";
+    return { ...invite, status };
+  });
+
+  return ServiceResponse.success("Invites retrieved successfully", {
+    invites: shaped,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: getTotalPages(total, limit),
+    },
+  });
+};
 
 /** POST /api/v1/admin/invites — admin invites a moderator by email */
 export const createInvite = async (

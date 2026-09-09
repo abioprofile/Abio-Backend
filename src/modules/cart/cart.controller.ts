@@ -5,6 +5,8 @@ import {
   parseRequest,
 } from "@/shared/utils/httpHandlers";
 import type { AuthenticatedRequest } from "@/shared/types/express";
+import { StatusCodes } from "http-status-codes";
+import AppError from "@/shared/utils/appError";
 import * as cartService from "./cart.service";
 import {
   addCartItemSchema,
@@ -53,6 +55,20 @@ export const removeCartItem = catchAsync(
 export const clearCart = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const serviceResponse = await cartService.clearCart(req.user!.id);
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const uploadArtwork = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.file?.buffer) {
+      throw new AppError("Artwork file is required", StatusCodes.BAD_REQUEST);
+    }
+    const serviceResponse = await cartService.uploadArtwork(
+      req.user!.id,
+      req.file.buffer,
+      req.file.mimetype
+    );
     return handleServiceResponse(serviceResponse, res);
   }
 );

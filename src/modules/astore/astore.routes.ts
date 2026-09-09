@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, hasRole } from "@/shared/middleware/auth.middleware";
+import { uploadImage } from "@/shared/middleware/upload.middleware";
 import * as astoreController from "./astore.controller";
 
 const astoreRouter = Router();
@@ -16,6 +17,12 @@ astoreRouter.patch(
   "/products/:id",
   ...requireStaff,
   astoreController.updateProduct
+);
+astoreRouter.post(
+  "/products/:id/images",
+  ...requireStaff,
+  uploadImage.single("image"),
+  astoreController.uploadProductImage
 );
 astoreRouter.post(
   "/products/:id/variants",

@@ -9,6 +9,11 @@ vi.mock("@/queues/queue", () => ({
     process: vi.fn(),
     on: vi.fn(),
   },
+  paymentExpiryQueue: {
+    add: vi.fn().mockResolvedValue({ id: "test-job" }),
+    process: vi.fn(),
+    on: vi.fn(),
+  },
   enqueueVerificationEmail: vi.fn().mockResolvedValue({ id: "test-job" }),
   enqueuePasswordResetEmail: vi.fn().mockResolvedValue({ id: "test-job" }),
   enqueueWelcomeEmail: vi.fn().mockResolvedValue({ id: "test-job" }),

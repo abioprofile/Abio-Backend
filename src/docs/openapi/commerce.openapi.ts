@@ -16,7 +16,8 @@ export const commerceSchemas = {
         type: "string",
         format: "uuid",
         nullable: true,
-        description: "Required for standard products with variants",
+        description:
+          "Required for standard products. Custom (MTO) products must omit this and use preferredColor.",
       },
       quantity: { type: "integer", minimum: 1, maximum: 99, default: 1 },
       customUsername: {
@@ -42,7 +43,14 @@ export const commerceSchemas = {
   },
   CheckoutInput: {
     type: "object",
+    required: ["deliveryZone", "shippingAddress"],
     properties: {
+      deliveryZone: {
+        type: "string",
+        enum: ["lagos", "outside_lagos"],
+        description:
+          "Lagos = free delivery; outside_lagos = flat ₦5,000 (500000 kobo) fee",
+      },
       shippingAddress: {
         type: "string",
         minLength: 5,

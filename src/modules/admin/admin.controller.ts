@@ -14,6 +14,7 @@ import {
   revokeBadgeSchema,
   createInviteSchema,
   acceptInviteSchema,
+  listInvitesSchema,
 } from "./admin.schemas";
 
 export const getMe = catchAsync(
@@ -72,6 +73,14 @@ export const revokeBadge = catchAsync(
       body,
       req.user!.id
     );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const listInvites = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { query } = parseRequest(listInvitesSchema, req);
+    const serviceResponse = await adminService.listInvites(query);
     return handleServiceResponse(serviceResponse, res);
   }
 );

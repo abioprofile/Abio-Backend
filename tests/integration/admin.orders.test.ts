@@ -122,15 +122,22 @@ describe("Admin AStore orders", () => {
     expect(res.body.data.items).toHaveLength(1);
   });
 
-  it("updates status and trackingNumber with audit", async () => {
-    const res = await testApp
+  it("updates status along valid transitions with audit", async () => {
+    const ready = await testApp
+      .patch(`${ADMIN_ORDERS}/${orderId}`)
+      .set(adminHeaders)
+      .send({ status: "ready" });
+    expect(ready.status).toBe(200);
+    expect(ready.body.data.status).toBe("ready");
+
+    const shipped = await testApp
       .patch(`${ADMIN_ORDERS}/${orderId}`)
       .set(adminHeaders)
       .send({ status: "shipped", trackingNumber: "NG-TRACK-001" });
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.status).toBe("shipped");
-    expect(res.body.data.trackingNumber).toBe("NG-TRACK-001");
+    expect(shipped.status).toBe(200);
+    expect(shipped.body.data.status).toBe("shipped");
+    expect(shipped.body.data.trackingNumber).toBe("NG-TRACK-001");
 
     const audit = await prisma.adminAuditLog.findFirst({
       where: {
@@ -141,6 +148,110 @@ describe("Admin AStore orders", () => {
       orderBy: { createdAt: "desc" },
     });
     expect(audit).not.toBeNull();
+  });
+
+  it("rejects invalid fulfillment jumps and unpaid fulfillment", async () => {
+    const jump = await testApp
+      .patch(`${ADMIN_ORDERS}/${orderId}`)
+      .set(adminHeaders)
+      .send({ status: "shipped" });
+    expect(jump.status).toBe(409);
+
+    const unpaid = await prisma.aStoreOrder.create({
+      data: {
+        userId,
+        status: "processing",
+        totalAmountKobo: 1000,
+        currency: "NGN",
+        payment: {
+          create: {
+            userId,
+            amountKobo: 1000,
+            currency: "NGN",
+            provider: "bach",
+            status: "pending",
+          },
+        },
+      },
+    });
+
+    const fulfillUnpaid = await testApp
+      .patch(`${ADMIN_ORDERS}/${unpaid.id}`)
+      .set(adminHeaders)
+      .send({ status: "ready" });
+    expect(fulfillUnpaid.status).toBe(409);
+  });
+
+  it("rejects cancel of a paid order", async () => {
+    const res = await testApp
+      .patch(`${ADMIN_ORDERS}/${orderId}`)
+      .set(adminHeaders)
+      .send({ status: "cancelled" });
+    expect(res.status).toBe(409);
+  });
+
+  it("cancels unpaid pending order and restocks", async () => {
+    const product = await testApp
+      .post(ADMIN_PRODUCTS)
+      .set(adminHeaders)
+      .send({
+        name: "Cancel Tee",
+        type: "standard",
+        basePriceKobo: 100000,
+      });
+    const variant = await testApp
+      .post(`${ADMIN_PRODUCTS}/${product.body.data.id}/variants`)
+      .set(adminHeaders)
+      .send({ colorName: "Black", stockQty: 2, priceKobo: 100000 });
+
+    const order = await prisma.aStoreOrder.create({
+      data: {
+        userId,
+        status: "processing",
+        totalAmountKobo: 100000,
+        currency: "NGN",
+        items: {
+          create: {
+            productId: product.body.data.id,
+            variantId: variant.body.data.id,
+            quantity: 1,
+            unitPriceKobo: 100000,
+          },
+        },
+        payment: {
+          create: {
+            userId,
+            amountKobo: 100000,
+            currency: "NGN",
+            provider: "bach",
+            status: "pending",
+          },
+        },
+      },
+    });
+
+    await prisma.aStoreProductVariant.update({
+      where: { id: variant.body.data.id },
+      data: { stockQty: 1 },
+    });
+
+    const res = await testApp
+      .patch(`${ADMIN_ORDERS}/${order.id}`)
+      .set(adminHeaders)
+      .send({ status: "cancelled" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("cancelled");
+
+    const payment = await prisma.payment.findFirst({
+      where: { orderId: order.id },
+    });
+    expect(payment?.status).toBe("failed");
+
+    const stock = await prisma.aStoreProductVariant.findUnique({
+      where: { id: variant.body.data.id },
+    });
+    expect(stock?.stockQty).toBe(2);
   });
 
   it("returns 404 for unknown order", async () => {

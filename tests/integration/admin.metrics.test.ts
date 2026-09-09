@@ -114,5 +114,19 @@ describe("Admin AStore metrics", () => {
     expect(data.users.total).toBeGreaterThanOrEqual(2);
     expect(data.recentOrders.length).toBeGreaterThanOrEqual(1);
     expect(data.recentOrders.length).toBeLessThanOrEqual(5);
+    expect(data.range).toEqual({ from: null, to: null });
+  });
+
+  it("filters metrics by from/to date range", async () => {
+    const farFuture = new Date("2099-01-01T00:00:00.000Z").toISOString();
+    const res = await testApp
+      .get(METRICS)
+      .query({ from: farFuture })
+      .set(adminHeaders);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.orders.total).toBe(0);
+    expect(res.body.data.payments.revenueKobo).toBe(0);
+    expect(res.body.data.range.from).toBe(farFuture);
   });
 });

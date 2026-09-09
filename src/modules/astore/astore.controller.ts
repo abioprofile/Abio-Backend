@@ -18,7 +18,10 @@ import {
   listOrdersSchema,
   orderIdParamSchema,
   updateOrderSchema,
+  metricsQuerySchema,
 } from "./astore.schemas";
+import { StatusCodes } from "http-status-codes";
+import AppError from "@/shared/utils/appError";
 
 export const listProducts = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -84,9 +87,26 @@ export const updateVariant = catchAsync(
   }
 );
 
+export const uploadProductImage = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params } = parseRequest(productIdParamSchema, req);
+    if (!req.file?.buffer) {
+      throw new AppError("Image file is required", StatusCodes.BAD_REQUEST);
+    }
+    const serviceResponse = await astoreService.uploadProductImage(
+      params.id,
+      req.file.buffer,
+      req.user!.id,
+      req.file.mimetype
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
 export const getMetrics = catchAsync(
-  async (_req: AuthenticatedRequest, res: Response) => {
-    const serviceResponse = await astoreMetricsService.getMetrics();
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { query } = parseRequest(metricsQuerySchema, req);
+    const serviceResponse = await astoreMetricsService.getMetrics(query);
     return handleServiceResponse(serviceResponse, res);
   }
 );

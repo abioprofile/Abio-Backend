@@ -55,3 +55,18 @@ export const enqueueWelcomeEmail = (
 export const enqueueWaitlistConfirmationEmail = (
   data: Omit<Extract<EmailJob, { type: "WAITLIST_CONFIRMATION" }>, "type">
 ) => emailQueue.add({ type: "WAITLIST_CONFIRMATION", ...data });
+
+/** Periodic job — expire abandoned pending payments and restock. */
+export type PaymentExpiryJob = { type: "EXPIRE_PENDING_PAYMENTS" };
+
+export const paymentExpiryQueue = new Bull<PaymentExpiryJob>(
+  "payment-expiry",
+  env.REDIS_URL,
+  {
+    defaultJobOptions: {
+      attempts: 1,
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    },
+  }
+);

@@ -62,6 +62,14 @@ export const acceptInviteSchema = z.object({
   }),
 });
 
+export const listInvitesSchema = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    status: z.enum(["pending", "accepted", "expired"]).optional(),
+  }),
+});
+
 export type TListUsersQuery = z.infer<typeof listUsersSchema>["query"];
 export type TGetUserByIdParams = z.infer<typeof getUserByIdSchema>["params"];
 export type TUpdateUserBody = z.infer<typeof updateUserSchema>["body"];
@@ -69,3 +77,4 @@ export type TAssignBadgeBody = z.infer<typeof assignBadgeSchema>["body"];
 export type TRevokeBadgeBody = z.infer<typeof revokeBadgeSchema>["body"];
 export type TCreateInviteBody = z.infer<typeof createInviteSchema>["body"];
 export type TAcceptInviteBody = z.infer<typeof acceptInviteSchema>["body"];
+export type TListInvitesQuery = z.infer<typeof listInvitesSchema>["query"];

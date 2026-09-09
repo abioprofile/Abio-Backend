@@ -1,11 +1,16 @@
 import { StatusCodes } from "http-status-codes";
-import type { Prisma } from "@prisma/client";
+import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/shared/config/database";
 import {
   getPagination,
   getTotalPages,
 } from "@/shared/utils/pagination";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
+import {
+  failPendingPaymentAndReleaseStock,
+  lockPaymentById,
+  restockOrderVariants,
+} from "@/modules/payments/payment-lifecycle";
 import type { TListOrdersQuery, TUpdateOrderBody } from "./astore.schemas";
 
 const adminOrderInclude = {
@@ -51,6 +56,21 @@ const adminOrderInclude = {
     },
   },
 } as const;
+
+/** Allowed next statuses from each fulfillment state. */
+const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  processing: ["ready", "cancelled"],
+  ready: ["shipped", "cancelled"],
+  shipped: ["received"],
+  received: [],
+  cancelled: [],
+};
+
+const FULFILLMENT_STATUSES: ReadonlySet<OrderStatus> = new Set([
+  "ready",
+  "shipped",
+  "received",
+]);
 
 /** GET /api/v1/admin/astore/orders */
 export const listOrders = async (query: TListOrdersQuery) => {
@@ -126,6 +146,9 @@ export const updateOrder = async (
       id: true,
       status: true,
       trackingNumber: true,
+      payment: {
+        select: { id: true, status: true },
+      },
     },
   });
 
@@ -137,7 +160,64 @@ export const updateOrder = async (
     );
   }
 
+  if (existing.status === "cancelled" && body.status !== undefined) {
+    return ServiceResponse.failure(
+      "Cancelled orders cannot change status",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  if (body.status !== undefined && body.status !== existing.status) {
+    const next = body.status;
+    const allowed = ALLOWED_TRANSITIONS[existing.status];
+
+    if (!allowed.includes(next)) {
+      return ServiceResponse.failure(
+        `Invalid status transition: ${existing.status} → ${next}`,
+        null,
+        StatusCodes.CONFLICT
+      );
+    }
+
+    if (FULFILLMENT_STATUSES.has(next)) {
+      if (existing.payment?.status !== "success") {
+        return ServiceResponse.failure(
+          "Fulfillment requires a successful payment",
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+    }
+
+    if (next === "cancelled") {
+      if (
+        existing.payment?.status === "success" ||
+        existing.payment?.status === "reversed"
+      ) {
+        return ServiceResponse.failure(
+          "Cannot cancel a paid order until refunds are supported",
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+    }
+  }
+
   const order = await prisma.$transaction(async (tx) => {
+    if (body.status === "cancelled" && existing.status !== "cancelled") {
+      if (existing.payment?.status === "pending" && existing.payment.id) {
+        const locked = await lockPaymentById(tx, existing.payment.id);
+        if (locked) {
+          await failPendingPaymentAndReleaseStock(tx, locked);
+        }
+      } else if (existing.payment?.status !== "failed") {
+        // Unpaid with no pending row, or missing payment — release reserved stock
+        await restockOrderVariants(tx, id);
+      }
+      // payment already failed → stock already restored by fail/webhook path
+    }
+
     const updated = await tx.aStoreOrder.update({
       where: { id },
       data: {

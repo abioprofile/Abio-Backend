@@ -61,6 +61,11 @@ const envSchema = z
     BACHS_RETURN_BASE_URL: z.string().url().optional(),
     /** Per-destination signing secret from Bachs webhook portal */
     BACHS_WEBHOOK_SECRET: z.string().optional(),
+    /**
+     * Minutes a payment may stay `pending` before expiry worker fails it,
+     * cancels the order, and restocks variants. Default 60.
+     */
+    PAYMENT_PENDING_TTL_MINUTES: z.coerce.number().int().positive().default(60),
   })
   .superRefine((data, ctx) => {
     if (data.EMAIL_PROVIDER === "brevo") {

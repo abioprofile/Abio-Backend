@@ -1,6 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
+import {
+  MAX_CART_ITEM_QTY,
+  STORE_CURRENCY,
+} from "@/modules/astore/astore.commerce";
+import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 import type { TAddCartItemBody, TUpdateCartItemBody } from "./cart.schemas";
 
 const cartItemInclude = {
@@ -123,7 +128,7 @@ export const getCart = async (userId: string) => {
 export const addCartItem = async (userId: string, body: TAddCartItemBody) => {
   const product = await prisma.aStoreProduct.findFirst({
     where: { id: body.productId, active: true },
-    select: { id: true, type: true },
+    select: { id: true, type: true, currency: true },
   });
 
   if (!product) {
@@ -134,7 +139,28 @@ export const addCartItem = async (userId: string, body: TAddCartItemBody) => {
     );
   }
 
-  if (body.variantId) {
+  if (product.currency !== STORE_CURRENCY) {
+    return ServiceResponse.failure(
+      `Only ${STORE_CURRENCY} products can be added to cart`,
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  const quantity = body.quantity ?? 1;
+
+  // Standard: must pick a stocked variant. Custom: MTO — no variant / no stock.
+  let variantId: string | null = null;
+
+  if (product.type === "standard") {
+    if (!body.variantId) {
+      return ServiceResponse.failure(
+        "A product option (variant) is required for this product",
+        null,
+        StatusCodes.BAD_REQUEST
+      );
+    }
+
     const variant = await prisma.aStoreProductVariant.findFirst({
       where: {
         id: body.variantId,
@@ -151,50 +177,77 @@ export const addCartItem = async (userId: string, body: TAddCartItemBody) => {
         StatusCodes.NOT_FOUND
       );
     }
+    variantId = variant.id;
+  } else if (body.variantId) {
+    return ServiceResponse.failure(
+      "Custom products do not use stocked variants — use preferredColor instead",
+      null,
+      StatusCodes.BAD_REQUEST
+    );
   }
 
-  const cart = await getOrCreateCart(userId);
-  const quantity = body.quantity ?? 1;
+  const customUsername = body.customUsername ?? null;
+  const preferredColor = body.preferredColor ?? null;
+  const instructions = body.instructions ?? null;
+  const artworkUrl = body.artworkUrl ?? null;
 
-  // Merge when same product + variant (+ custom username for custom lines)
-  const existingItem = await prisma.cartItem.findFirst({
-    where: {
-      cartId: cart.id,
-      productId: body.productId,
-      variantId: body.variantId ?? null,
-      customUsername: body.customUsername ?? null,
-    },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM carts WHERE "userId" = ${userId} FOR UPDATE
+      `;
 
-  if (existingItem) {
-    await prisma.cartItem.update({
-      where: { id: existingItem.id },
-      data: {
-        quantity: existingItem.quantity + quantity,
-        ...(body.preferredColor !== undefined
-          ? { preferredColor: body.preferredColor }
-          : {}),
-        ...(body.instructions !== undefined
-          ? { instructions: body.instructions }
-          : {}),
-        ...(body.artworkUrl !== undefined
-          ? { artworkUrl: body.artworkUrl }
-          : {}),
-      },
+      let cartId = locked[0]?.id;
+      if (!cartId) {
+        const created = await tx.cart.create({ data: { userId } });
+        cartId = created.id;
+      }
+
+      const existingItem = await tx.cartItem.findFirst({
+        where: {
+          cartId,
+          productId: body.productId,
+          variantId,
+          customUsername,
+          preferredColor,
+          instructions,
+          artworkUrl,
+        },
+      });
+
+      if (existingItem) {
+        const nextQty = existingItem.quantity + quantity;
+        if (nextQty > MAX_CART_ITEM_QTY) {
+          throw new Error("QTY_CAP");
+        }
+        await tx.cartItem.update({
+          where: { id: existingItem.id },
+          data: { quantity: nextQty },
+        });
+      } else {
+        await tx.cartItem.create({
+          data: {
+            cartId,
+            productId: body.productId,
+            variantId,
+            quantity,
+            customUsername,
+            preferredColor,
+            instructions,
+            artworkUrl,
+          },
+        });
+      }
     });
-  } else {
-    await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        productId: body.productId,
-        variantId: body.variantId ?? null,
-        quantity,
-        customUsername: body.customUsername,
-        preferredColor: body.preferredColor,
-        instructions: body.instructions,
-        artworkUrl: body.artworkUrl,
-      },
-    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "QTY_CAP") {
+      return ServiceResponse.failure(
+        `Quantity cannot exceed ${MAX_CART_ITEM_QTY} per line`,
+        null,
+        StatusCodes.CONFLICT
+      );
+    }
+    throw err;
   }
 
   const updated = await getOrCreateCart(userId);
@@ -288,4 +341,23 @@ export const clearCart = async (userId: string) => {
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
   const updated = await getOrCreateCart(userId);
   return ServiceResponse.success("Cart cleared", shapeCart(updated));
+};
+
+/** POST /api/v1/cart/artwork — upload custom artwork → CDN URL for cart line */
+export const uploadArtwork = async (
+  _userId: string,
+  fileBuffer: Buffer,
+  mimetype?: string
+) => {
+  const { url, publicId } = await uploadToCloudinary(
+    fileBuffer,
+    "astore-artwork",
+    mimetype
+  );
+
+  return ServiceResponse.success(
+    "Artwork uploaded successfully",
+    { url, publicId },
+    StatusCodes.CREATED
+  );
 };

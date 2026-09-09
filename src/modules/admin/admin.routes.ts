@@ -23,6 +23,7 @@ adminRouter.post(
 );
 
 /** Only admins can invite moderators */
+adminRouter.get("/invites", ...requireAdmin, adminController.listInvites);
 adminRouter.post("/invites", ...requireAdmin, adminController.createInvite);
 /** Any logged-in user can accept an invite for their own email */
 adminRouter.post(

@@ -22,7 +22,9 @@
     "worker:email": "tsx src/queues/email.worker.ts | pino-pretty",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "predev": "prisma migrate deploy && prisma generate",
+    "db:check": "node scripts/check-commerce-schema.cjs"
   },
   "dependencies": {
     "@otplib/plugin-base32-scure": "^13.4.0",

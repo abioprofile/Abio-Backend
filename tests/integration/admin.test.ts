@@ -556,4 +556,20 @@ describe("Admin API", () => {
 
     expect(res.status).toBe(403);
   });
+
+  it("lists invites for admin", async () => {
+    await testApp
+      .post("/api/v1/admin/invites")
+      .set(adminHeaders)
+      .send({ email: "list-me@test.abio.local" });
+
+    const res = await testApp
+      .get("/api/v1/admin/invites")
+      .query({ status: "pending" })
+      .set(adminHeaders);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.invites.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.data.invites[0].status).toBe("pending");
+  });
 });

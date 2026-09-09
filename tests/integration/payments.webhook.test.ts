@@ -199,4 +199,39 @@ describe("Bachs webhook", () => {
     });
     expect(variant?.stockQty).toBe(5);
   });
+
+  it("rejects success after payment already failed", async () => {
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: { status: "failed", failedAt: new Date() },
+    });
+    await prisma.aStoreOrder.update({
+      where: { id: orderId },
+      data: { status: "cancelled" },
+    });
+
+    const payload = {
+      id: "evt_late_success",
+      type: "collection.succeeded",
+      data: {
+        checkout_id: checkoutId,
+        amount: "1000.00",
+        currency: "NGN",
+      },
+    };
+    const raw = JSON.stringify(payload);
+    const ts = Math.floor(Date.now() / 1000);
+
+    const res = await testApp
+      .post(WEBHOOK)
+      .set("Content-Type", "application/json")
+      .set("X-Bachs-Timestamp", String(ts))
+      .set("X-Bachs-Signature", signBody(raw, SECRET, ts))
+      .send(raw);
+
+    expect(res.status).toBe(409);
+
+    const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    expect(payment?.status).toBe("failed");
+  });
 });

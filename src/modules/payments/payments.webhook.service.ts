@@ -1,5 +1,4 @@
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import {
@@ -7,6 +6,13 @@ import {
   getBachsWebhookSecret,
   verifyBachsSignature,
 } from "./bachs.signature";
+import {
+  alreadySawEvent,
+  appendEventId,
+  failPendingPaymentAndReleaseStock,
+  lockPaymentById,
+  succeedPendingPayment,
+} from "./payment-lifecycle";
 
 type BachsEvent = {
   id: string;
@@ -26,65 +32,36 @@ type BachsEvent = {
   };
 };
 
-const findPaymentForEvent = async (data: BachsEvent["data"]) => {
+const findPaymentIdForEvent = async (data: BachsEvent["data"]) => {
   if (!data) return null;
 
   if (data.checkout_id) {
     const byRef = await prisma.payment.findFirst({
       where: { providerRef: data.checkout_id },
-      include: { order: true },
+      select: { id: true },
     });
-    if (byRef) return byRef;
+    if (byRef) return byRef.id;
   }
 
   const orderId = data.metadata?.order_id || data.reference || undefined;
   if (orderId) {
-    return prisma.payment.findFirst({
+    const byOrder = await prisma.payment.findFirst({
       where: { orderId },
-      include: { order: true },
+      select: { id: true },
     });
+    if (byOrder) return byOrder.id;
   }
 
   if (data.metadata?.payment_id) {
-    return prisma.payment.findUnique({
-      where: { id: data.metadata.payment_id },
-      include: { order: true },
-    });
+    return data.metadata.payment_id;
   }
 
   return null;
 };
 
-const alreadySawEvent = (
-  rawWebhook: Prisma.JsonValue | null,
-  eventId: string
-): boolean => {
-  if (!rawWebhook || typeof rawWebhook !== "object" || Array.isArray(rawWebhook)) {
-    return false;
-  }
-  const events = (rawWebhook as { eventIds?: unknown }).eventIds;
-  return Array.isArray(events) && events.includes(eventId);
-};
-
-const appendEventId = (
-  rawWebhook: Prisma.JsonValue | null,
-  eventId: string,
-  payload: unknown
-): Prisma.InputJsonValue => {
-  const base =
-    rawWebhook && typeof rawWebhook === "object" && !Array.isArray(rawWebhook)
-      ? (rawWebhook as Record<string, unknown>)
-      : {};
-  const prev = Array.isArray(base.eventIds) ? (base.eventIds as string[]) : [];
-  return {
-    ...base,
-    eventIds: [...prev, eventId],
-    lastEvent: payload,
-  } as Prisma.InputJsonValue;
-};
-
 /**
  * Handle a verified Bachs webhook body (already signature-checked).
+ * Status transitions + event idempotency run under FOR UPDATE lock.
  */
 export const handleBachsWebhookEvent = async (event: BachsEvent) => {
   const type = event.type;
@@ -94,8 +71,8 @@ export const handleBachsWebhookEvent = async (event: BachsEvent) => {
     return ServiceResponse.success("Event ignored", { ignored: true, type });
   }
 
-  const payment = await findPaymentForEvent(data);
-  if (!payment) {
+  const paymentId = await findPaymentIdForEvent(data);
+  if (!paymentId) {
     return ServiceResponse.failure(
       "Payment not found for webhook",
       null,
@@ -103,27 +80,12 @@ export const handleBachsWebhookEvent = async (event: BachsEvent) => {
     );
   }
 
-  if (alreadySawEvent(payment.rawWebhook, event.id)) {
-    return ServiceResponse.success("Event already processed", {
-      paymentId: payment.id,
-      status: payment.status,
+  if (type === "collection.succeeded" && data?.amount) {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { amountKobo: true },
     });
-  }
-
-  if (type === "collection.succeeded") {
-    if (payment.status === "success") {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          rawWebhook: appendEventId(payment.rawWebhook, event.id, event),
-        },
-      });
-      return ServiceResponse.success("Payment already successful", {
-        paymentId: payment.id,
-      });
-    }
-
-    if (data?.amount) {
+    if (payment) {
       const kobo = bachsAmountToKobo(data.amount);
       if (Number.isFinite(kobo) && kobo !== payment.amountKobo) {
         return ServiceResponse.failure(
@@ -133,78 +95,86 @@ export const handleBachsWebhookEvent = async (event: BachsEvent) => {
         );
       }
     }
-
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: "success",
-        paidAt: new Date(),
-        failedAt: null,
-        providerRef: data?.checkout_id || payment.providerRef,
-        rawWebhook: appendEventId(payment.rawWebhook, event.id, event),
-      },
-    });
-
-    return ServiceResponse.success("Payment marked successful", {
-      paymentId: payment.id,
-      orderId: payment.orderId,
-    });
   }
 
-  // collection.failed
-  if (payment.status === "failed") {
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        rawWebhook: appendEventId(payment.rawWebhook, event.id, event),
-      },
-    });
-    return ServiceResponse.success("Payment already failed", {
-      paymentId: payment.id,
-    });
-  }
+  return prisma.$transaction(async (tx) => {
+    const locked = await lockPaymentById(tx, paymentId);
+    if (!locked) {
+      return ServiceResponse.failure(
+        "Payment not found for webhook",
+        null,
+        StatusCodes.NOT_FOUND
+      );
+    }
 
-  if (payment.status === "success") {
-    return ServiceResponse.failure(
-      "Cannot fail a successful payment via webhook",
-      null,
-      StatusCodes.CONFLICT
-    );
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: "failed",
-        failedAt: new Date(),
-        providerRef: data?.checkout_id || payment.providerRef,
-        rawWebhook: appendEventId(payment.rawWebhook, event.id, event),
-      },
-    });
-
-    await tx.aStoreOrder.update({
-      where: { id: payment.orderId },
-      data: { status: "cancelled" },
-    });
-
-    const items = await tx.aStoreOrderItem.findMany({
-      where: { orderId: payment.orderId, variantId: { not: null } },
-      select: { variantId: true, quantity: true },
-    });
-
-    for (const item of items) {
-      if (!item.variantId) continue;
-      await tx.aStoreProductVariant.update({
-        where: { id: item.variantId },
-        data: { stockQty: { increment: item.quantity } },
+    if (alreadySawEvent(locked.rawWebhook, event.id)) {
+      return ServiceResponse.success("Event already processed", {
+        paymentId: locked.id,
+        status: locked.status,
       });
     }
-  });
 
-  return ServiceResponse.success("Payment marked failed and stock restored", {
-    paymentId: payment.id,
-    orderId: payment.orderId,
+    const nextWebhook = appendEventId(locked.rawWebhook, event.id, event);
+
+    if (type === "collection.succeeded") {
+      const result = await succeedPendingPayment(tx, locked, {
+        providerRef: data?.checkout_id || locked.providerRef,
+        rawWebhook: nextWebhook,
+      });
+
+      if (result === "blocked") {
+        return ServiceResponse.failure(
+          "Cannot mark a failed/reversed payment as successful",
+          null,
+          StatusCodes.CONFLICT
+        );
+      }
+
+      return ServiceResponse.success(
+        result === "noop"
+          ? "Payment already successful"
+          : "Payment marked successful",
+        {
+          paymentId: locked.id,
+          orderId: locked.orderId,
+        }
+      );
+    }
+
+    // collection.failed
+    if (locked.status === "success") {
+      return ServiceResponse.failure(
+        "Cannot fail a successful payment via webhook",
+        null,
+        StatusCodes.CONFLICT
+      );
+    }
+
+    if (locked.status === "failed") {
+      await tx.payment.update({
+        where: { id: locked.id },
+        data: { rawWebhook: nextWebhook },
+      });
+      return ServiceResponse.success("Payment already failed", {
+        paymentId: locked.id,
+      });
+    }
+
+    const released = await failPendingPaymentAndReleaseStock(tx, locked, {
+      providerRef: data?.checkout_id || locked.providerRef,
+      rawWebhook: nextWebhook,
+    });
+
+    if (!released) {
+      return ServiceResponse.success("Payment already failed", {
+        paymentId: locked.id,
+      });
+    }
+
+    return ServiceResponse.success("Payment marked failed and stock restored", {
+      paymentId: locked.id,
+      orderId: locked.orderId,
+    });
   });
 };
 

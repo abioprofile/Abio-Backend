@@ -11,7 +11,25 @@ themesRouter.post(
   authenticate,
   hasRole(["admin", "moderator"]),
   uploadImage.single("wallpaper_config[image]"),
-  themesController.store
+  themesController.store,
 );
 
+themesRouter.get(
+  "/:id",
+  authenticate,
+  hasRole(["admin", "moderator"]),
+  themesController.show,
+);
+themesRouter.patch(
+  "/:id",
+  authenticate,
+  hasRole(["admin", "moderator"]),
+  themesController.update,
+);
+themesRouter.delete(
+  "/:id",
+  authenticate,
+  hasRole(["admin", "moderator"]),
+  themesController.destroy,
+);
 export default themesRouter;

@@ -33,6 +33,11 @@ enum PaymentProvider {
   opay
 }
 
+enum DeliveryZone {
+  lagos
+  outside_lagos
+}
+
 enum AdminInviteRole {
   moderator
 }
@@ -262,6 +267,8 @@ model AStoreProduct {
   type          ProductType
   currency      String                 @default("NGN")
   basePriceKobo Int
+  /** Product-level gallery (custom / hero). Variants keep their own color shots. */
+  imageUrls     String[]
   createdAt     DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime               @updatedAt @db.Timestamptz(6)
   variants      AStoreProductVariant[]
@@ -329,15 +336,19 @@ model CartItem {
 }
 
 model AStoreOrder {
-  id              String      @id @default(uuid())
-  userId          String
-  status          OrderStatus @default(processing)
-  totalAmountKobo Int
-  currency        String      @default("NGN")
-  trackingNumber  String?
-  shippingAddress String?
-  createdAt       DateTime    @default(now()) @db.Timestamptz(6)
-  updatedAt       DateTime    @updatedAt @db.Timestamptz(6)
+  id               String        @id @default(uuid())
+  userId           String
+  status           OrderStatus   @default(processing)
+  totalAmountKobo  Int
+  /** Line items subtotal before delivery fee */
+  subtotalKobo     Int           @default(0)
+  shippingFeeKobo  Int           @default(0)
+  deliveryZone     DeliveryZone?
+  currency         String        @default("NGN")
+  trackingNumber   String?
+  shippingAddress  String?
+  createdAt        DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(6)
 
   items   AStoreOrderItem[]
   payment Payment?
@@ -355,6 +366,13 @@ model AStoreOrderItem {
   variantId      String?
   quantity       Int
   unitPriceKobo  Int
+  /** Snapshots at checkout — survive later catalog edits */
+  productName    String         @default("")
+  productSlug    String         @default("")
+  productType    ProductType?
+  variantColorName String?
+  variantColorHex  String?
+  imageUrls      String[]
   customUsername String?
   preferredColor String?
   instructions   String?

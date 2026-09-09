@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { testApp } from "../helpers/testApp";
 import {
@@ -6,6 +6,13 @@ import {
   createAdminUser,
   createTestUser,
 } from "../helpers/factories";
+
+vi.mock("@/shared/utils/cloudinary", () => ({
+  uploadToCloudinary: vi.fn().mockResolvedValue({
+    url: "https://res.cloudinary.com/demo/astore-artwork/x.png",
+    publicId: "astore-artwork/x",
+  }),
+}));
 
 const CART = "/api/v1/cart";
 const ASTORE = "/api/v1/admin/astore";
@@ -128,5 +135,97 @@ describe("Cart API", () => {
       .send({ productId, variantId, quantity: 1 });
 
     expect(res.status).toBe(404);
+  });
+
+  it("requires variant for standard products", async () => {
+    const res = await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({ productId, quantity: 1 });
+    expect(res.status).toBe(400);
+  });
+
+  it("caps line quantity at 99 on merge", async () => {
+    await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({ productId, variantId, quantity: 90 });
+
+    const res = await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({ productId, variantId, quantity: 20 });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("does not merge custom lines with different artwork", async () => {
+    const custom = await testApp
+      .post(`${ASTORE}/products`)
+      .set(adminHeaders)
+      .send({
+        name: "Custom Merge Card",
+        type: "custom",
+        basePriceKobo: 600000,
+      });
+
+    await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({
+        productId: custom.body.data.id,
+        customUsername: "one",
+        artworkUrl: "https://cdn.example.com/a.png",
+      });
+
+    const second = await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({
+        productId: custom.body.data.id,
+        customUsername: "one",
+        artworkUrl: "https://cdn.example.com/b.png",
+      });
+
+    expect(second.status).toBe(201);
+    expect(second.body.data.items).toHaveLength(2);
+  });
+
+  it("rejects variantId on custom products", async () => {
+    const custom = await testApp
+      .post(`${ASTORE}/products`)
+      .set(adminHeaders)
+      .send({
+        name: "Custom No Variant",
+        type: "custom",
+        basePriceKobo: 600000,
+      });
+
+    const res = await testApp
+      .post(`${CART}/items`)
+      .set(userHeaders)
+      .send({
+        productId: custom.body.data.id,
+        variantId,
+        customUsername: "x",
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("uploads artwork and returns a CDN URL", async () => {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64"
+    );
+
+    const res = await testApp
+      .post(`${CART}/artwork`)
+      .set(userHeaders)
+      .attach("artwork", png, "pixel.png");
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.url).toContain("cloudinary");
+    expect(res.body.data.publicId).toBeTruthy();
   });
 });
