@@ -37,6 +37,12 @@ enum AdminInviteRole {
   moderator
 }
 
+enum BadgeRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 model Waitlist {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -72,6 +78,8 @@ model User {
   verificationBadges       VerificationBadge[] @relation("BadgeOwner")
   badgesAssigned           VerificationBadge[] @relation("BadgeAssignedBy")
   badgesRevoked            VerificationBadge[] @relation("BadgeRevokedBy")
+  badgeRequests            BadgeRequest[]      @relation("BadgeRequestOwner")
+  badgeRequestsReviewed    BadgeRequest[]      @relation("BadgeRequestReviewedBy")
   astoreOrders             AStoreOrder[]
   payments                 Payment[]
   adminInvitesSent         AdminInvite[]       @relation("AdminInvitesSent")
@@ -220,6 +228,29 @@ model VerificationBadge {
   @@unique([userId, badgeType])
   @@index([userId])
   @@map("verification_badges")
+}
+
+/** User application for a verification badge (reason + ID document). */
+model BadgeRequest {
+  id            String             @id @default(uuid())
+  userId        String
+  badgeType     String             @default("verified")
+  status        BadgeRequestStatus @default(pending)
+  reason        String
+  idDocumentUrl String
+  reviewedAt    DateTime?          @db.Timestamptz(6)
+  reviewedById  String?
+  reviewNote    String?
+  createdAt     DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(6)
+
+  user       User  @relation("BadgeRequestOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("BadgeRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+  @@map("badge_requests")
 }
 
 model AStoreProduct {

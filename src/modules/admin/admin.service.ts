@@ -321,6 +321,17 @@ export const assignBadge = async (
       select: badgeSelect,
     });
 
+    // Keep request queue consistent with direct grants
+    await tx.badgeRequest.updateMany({
+      where: { userId, badgeType, status: "pending" },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedById: actorId,
+        reviewNote: "Closed by admin direct grant",
+      },
+    });
+
     await tx.adminAuditLog.create({
       data: {
         adminId: actorId,

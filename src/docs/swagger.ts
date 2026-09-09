@@ -3,6 +3,7 @@ import type { Express } from "express";
 import env from "@/env";
 import { adminSchemas, adminPaths } from "./openapi/admin.openapi";
 import { commerceSchemas, commercePaths } from "./openapi/commerce.openapi";
+import { badgesSchemas, badgesPaths } from "./openapi/badges.openapi";
 
 const swaggerDocument = {
   openapi: "3.0.0",
@@ -98,6 +99,11 @@ In production, passwords must be at least 8 characters and include a letter, a n
       name: "User — Orders",
       description: "[User] Checkout, pay, and own order history",
     },
+    {
+      name: "User — Badges",
+      description:
+        "[User] Request verification (reason + ID document) and check status",
+    },
     // Admin
     {
       name: "Admin — Staff",
@@ -105,7 +111,13 @@ In production, passwords must be at least 8 characters and include a letter, a n
     },
     {
       name: "Admin — Users",
-      description: "[Admin/Moderator] User directory, activate/deactivate, badges",
+      description:
+        "[Admin/Moderator] User directory, activate/deactivate, direct badge grant/revoke",
+    },
+    {
+      name: "Admin — Badge Requests",
+      description:
+        "[Admin/Moderator] Review queue — approve/reject verification applications",
     },
     {
       name: "Admin — Invites",
@@ -1498,8 +1510,13 @@ In production, passwords must be at least 8 characters and include a letter, a n
   },
 };
 
-Object.assign(swaggerDocument.components.schemas, adminSchemas, commerceSchemas);
-Object.assign(swaggerDocument.paths, adminPaths, commercePaths);
+Object.assign(
+  swaggerDocument.components.schemas,
+  adminSchemas,
+  commerceSchemas,
+  badgesSchemas
+);
+Object.assign(swaggerDocument.paths, adminPaths, commercePaths, badgesPaths);
 
 export const setupSwagger = (app: Express) => {
   app.use(

@@ -26,6 +26,7 @@ async function resetDatabase() {
     TRUNCATE TABLE
       "admin_audit_logs",
       "admin_invites",
+      "badge_requests",
       "payments",
       "astore_order_items",
       "astore_orders",

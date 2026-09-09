@@ -28,6 +28,10 @@ import astoreRouter from "@/modules/astore/astore.routes";
 import astorePublicRouter from "@/modules/astore/astore.public.routes";
 import cartRouter from "@/modules/cart/cart.routes";
 import ordersRouter from "@/modules/orders/orders.routes";
+import {
+  userBadgesRouter,
+  adminBadgesRouter,
+} from "@/modules/badges/badges.routes";
 import paymentsWebhookRouter from "@/modules/payments/payments.webhook.routes";
 const app: Express = express();
 
@@ -63,6 +67,7 @@ app.use(pp.initialize());
 
 // User feature routers share /api/v1/user — profiles last (has /:username)
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/user", userBadgesRouter);
 app.use("/api/v1/user", preferencesRouter);
 app.use("/api/v1/user", profileRouter);
 
@@ -76,6 +81,7 @@ app.use("/api/v1", router);
 
 app.use("/api/v1/themes", themesRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/admin", adminBadgesRouter);
 app.use("/api/v1/admin/astore", astoreRouter);
 app.use("/api/v1/astore", astorePublicRouter);
 app.use("/api/v1/cart", cartRouter);
