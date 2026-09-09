@@ -52,6 +52,8 @@ async function seedAdminUser() {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  const existing = await prisma.user.findUnique({ where: { email } });
+
   const user = await prisma.user.upsert({
     where: { email },
     create: {
@@ -66,9 +68,12 @@ async function seedAdminUser() {
       },
     },
     update: {
-      // Keep existing password unless you intentionally rotate via env later
+      // Re-seed resets password from ADMIN_SEED_PASSWORD so deploys stay usable
+      name,
+      password: passwordHash,
       active: true,
       isEmailVerified: true,
+      isOnboardingCompleted: true,
     },
   });
 
@@ -86,7 +91,9 @@ async function seedAdminUser() {
     update: {},
   });
 
-  console.log(`✓ admin user: ${email} (role: admin)`);
+  console.log(
+    `✓ admin user: ${email} (role: admin) — ${existing ? "updated" : "created"}`
+  );
 }
 
 async function main() {
