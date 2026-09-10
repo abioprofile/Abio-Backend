@@ -33,6 +33,7 @@ import {
   adminBadgesRouter,
 } from "@/modules/badges/badges.routes";
 import paymentsWebhookRouter from "@/modules/payments/payments.webhook.routes";
+import analyticsRouter from "@/modules/analytics/analytics.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -86,6 +87,7 @@ app.use("/api/v1/admin/astore", astoreRouter);
 app.use("/api/v1/astore", astorePublicRouter);
 app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/orders", ordersRouter);
+app.use("/api/v1/analytics", analyticsRouter);
 app.get("/health", (_req, res) => {
 	res.json({
 		status: "ok",

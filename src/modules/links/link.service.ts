@@ -9,6 +9,7 @@ import {
 import { SOCIAL_PLATFORMS } from "@/shared/utils/constants";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 import cache from "@/lib/cache";
+import { utcDay } from "@/modules/analytics/analytics.utils";
 import type {
   TCreateLink,
   TUpdateLink,
@@ -234,25 +235,49 @@ export const trackClick = async (linkId: string) => {
     where: { id: linkId },
     include: {
       profile: {
-        select: { username: true },
+        select: { id: true, username: true, isPublic: true },
       },
     },
   });
 
-  if (!link) {
+  if (!link || !link.isVisible || !link.profile.isPublic) {
     throw new NotFoundError("Link");
   }
 
-  await prisma.link.update({
-    where: { id: linkId },
-    data: {
-      clickCount: { increment: 1 },
-    },
+  const day = utcDay();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.link.update({
+      where: { id: linkId },
+      data: { clickCount: { increment: 1 } },
+    });
+
+    await tx.linkClickEvent.create({
+      data: {
+        linkId,
+        profileId: link.profileId,
+      },
+    });
+
+    await tx.profileAnalyticsDaily.upsert({
+      where: {
+        profileId_date: { profileId: link.profileId, date: day },
+      },
+      create: {
+        profileId: link.profileId,
+        date: day,
+        views: 0,
+        linkClicks: 1,
+      },
+      update: { linkClicks: { increment: 1 } },
+    });
   });
 
-  cache.del(`public_profiles:${link.profile.username}`);
+  if (link.profile.username) {
+    cache.del(`public_profiles:${link.profile.username}`);
+  }
 
-  return ServiceResponse.success("Click tracked", null);
+  return ServiceResponse.success("Click tracked", { recorded: true });
 };
 
 export const updateLinkIcon = async (

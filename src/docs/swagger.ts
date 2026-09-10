@@ -4,6 +4,7 @@ import env from "@/env";
 import { adminSchemas, adminPaths } from "./openapi/admin.openapi";
 import { commerceSchemas, commercePaths } from "./openapi/commerce.openapi";
 import { badgesSchemas, badgesPaths } from "./openapi/badges.openapi";
+import { analyticsSchemas, analyticsPaths } from "./openapi/analytics.openapi";
 
 const swaggerDocument = {
   openapi: "3.0.0",
@@ -67,6 +68,10 @@ In production, passwords must be at least 8 characters and include a letter, a n
       description: "[Public] Unauthenticated link click tracking",
     },
     {
+      name: "Public — Analytics",
+      description: "[Public] Profile view tracking (fire-and-forget)",
+    },
+    {
       name: "Public — AStore",
       description: "[Public] Shop catalog (active products only)",
     },
@@ -78,6 +83,10 @@ In production, passwords must be at least 8 characters and include a letter, a n
     {
       name: "User — Account",
       description: "[User] Account (me, delete, update email)",
+    },
+    {
+      name: "User — Analytics",
+      description: "[User] Owner profile analytics (views, CTR, daily trends)",
     },
     {
       name: "User — Profiles",
@@ -1514,9 +1523,16 @@ Object.assign(
   swaggerDocument.components.schemas,
   adminSchemas,
   commerceSchemas,
-  badgesSchemas
+  badgesSchemas,
+  analyticsSchemas
 );
-Object.assign(swaggerDocument.paths, adminPaths, commercePaths, badgesPaths);
+Object.assign(
+  swaggerDocument.paths,
+  adminPaths,
+  commercePaths,
+  badgesPaths,
+  analyticsPaths
+);
 
 export const setupSwagger = (app: Express) => {
   app.use(

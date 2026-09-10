@@ -119,9 +119,14 @@ model Profile {
   isPublic  Boolean            @default(true)
   location  String?
   username  String?            @unique
+  /** Lifetime profile views (hot counter) */
+  viewCount Int                @default(0)
   links     Link[]
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   display   DisplayPreference?
+  viewEvents   ProfileViewEvent[]
+  clickEvents  LinkClickEvent[]
+  analyticsDaily ProfileAnalyticsDaily[]
 
   @@map("profiles")
 }
@@ -139,10 +144,51 @@ model Link {
   updatedAt    DateTime @updatedAt @db.Timestamptz(6)
   icon_link    String?
   profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  clickEvents  LinkClickEvent[]
 
   @@index([profileId])
   @@index([displayOrder])
   @@map("links")
+}
+
+/** Raw profile view events (public track POST) */
+model ProfileViewEvent {
+  id        String   @id @default(uuid())
+  profileId String
+  viewedAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, viewedAt])
+  @@map("profile_view_events")
+}
+
+/** Raw link click events (extends public click track) */
+model LinkClickEvent {
+  id        String   @id @default(uuid())
+  linkId    String
+  profileId String
+  clickedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  link    Link    @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, clickedAt])
+  @@index([profileId, clickedAt])
+  @@map("link_click_events")
+}
+
+/** UTC calendar-day rollups for owner charts */
+model ProfileAnalyticsDaily {
+  profileId  String
+  date       DateTime @db.Date
+  views      Int      @default(0)
+  linkClicks Int      @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, date])
+  @@map("profile_analytics_daily")
 }
 
 model DisplayPreference {
