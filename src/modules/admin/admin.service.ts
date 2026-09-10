@@ -17,6 +17,7 @@ import type {
 } from "./admin.schemas";
 import { createRawToken, hashRawToken } from "@/modules/auth/auth.tokens";
 import env from "@/env";
+import { sendModeratorInvitation } from "@/shared/utils/email";
 
 /** GET /api/v1/admin/me — small admin identity payload */
 export const getMe = async (userId: string) => {
@@ -431,6 +432,7 @@ export const listInvites = async (query: TListInvitesQuery) => {
   const now = new Date();
 
   const where: Prisma.AdminInviteWhereInput = {};
+  if (query.q?.trim()) where.email = { contains: query.q.trim(), mode: "insensitive" };
   if (query.status === "accepted") {
     where.acceptedAt = { not: null };
   } else if (query.status === "pending") {
@@ -551,13 +553,35 @@ export const createInvite = async (
     return created;
   });
 
-  // Raw token returned once — store hash only. Email wiring can come later.
+  const adminUrl = env.ADMIN_URL || (env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined);
+  const inviteUrl = adminUrl
+    ? new URL(`/admin/accept-invite?token=${encodeURIComponent(raw)}`, adminUrl).toString()
+    : null;
+  let emailStatus: "sent" | "failed" = "failed";
+  let emailError: string | undefined = inviteUrl ? undefined : "The backend ADMIN_URL is not configured.";
+  if (inviteUrl) {
+    try {
+      await sendModeratorInvitation(email, inviteUrl);
+      emailStatus = "sent";
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      emailError = code === "EAUTH"
+        ? "The email provider rejected the SMTP credentials. Update the backend SMTP username and password."
+        : "The email provider could not send the invitation. Check the backend email provider configuration and connectivity.";
+      // Keep the valid invitation available for manual sharing if the provider fails.
+      // Never expose provider credentials or the raw token in error logs.
+    }
+  }
+
+  // Raw token returned once; only its hash is persisted.
   return ServiceResponse.success(
     "Moderator invite created successfully",
     {
       ...invite,
       token: raw,
-      inviteUrl: `${env.CLIENT_URL}/admin/accept-invite?token=${raw}`,
+      inviteUrl,
+      emailStatus,
+      emailError,
     },
     StatusCodes.CREATED
   );

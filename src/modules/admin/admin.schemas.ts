@@ -64,6 +64,7 @@ export const acceptInviteSchema = z.object({
 
 export const listInvitesSchema = z.object({
   query: z.object({
+    q: z.string().trim().max(200).optional(),
     page: z.string().optional(),
     limit: z.string().optional(),
     status: z.enum(["pending", "accepted", "expired"]).optional(),

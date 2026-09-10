@@ -41,6 +41,7 @@ const envSchema = z
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     CLIENT_URL: z.string().url(),
+    ADMIN_URL: z.string().url().optional(),
     GOOGLE_OAUTH_CLIENT_ID: z.string(),
     GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
     GOOGLE_OAUTH_PROJECT_ID: z.string(),
