@@ -572,4 +572,64 @@ describe("Admin API", () => {
     expect(res.body.data.invites.length).toBeGreaterThanOrEqual(1);
     expect(res.body.data.invites[0].status).toBe("pending");
   });
+
+  it("revokes moderator role (admin only)", async () => {
+    const invitee = await createTestUser({
+      email: `mod-revoke-${Date.now()}@test.abio.local`,
+    });
+
+    const role = await prisma.role.upsert({
+      where: { name: "moderator" },
+      create: { name: "moderator" },
+      update: {},
+    });
+    await prisma.userRole.create({
+      data: { userId: invitee.id, roleId: role.id },
+    });
+
+    const meBefore = await testApp
+      .get("/api/v1/admin/me")
+      .set(authHeader(invitee.id));
+    expect(meBefore.body.data.roles).toContain("moderator");
+
+    const forbidden = await testApp
+      .post(`/api/v1/admin/users/${invitee.id}/roles/moderator/revoke`)
+      .set(userHeaders)
+      .send({ reason: "nope" });
+    expect(forbidden.status).toBe(403);
+
+    const res = await testApp
+      .post(`/api/v1/admin/users/${invitee.id}/roles/moderator/revoke`)
+      .set(adminHeaders)
+      .send({ reason: "No longer needed" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      userId: invitee.id,
+      role: "moderator",
+      revoked: true,
+    });
+
+    const meAfter = await testApp
+      .get("/api/v1/admin/me")
+      .set(authHeader(invitee.id));
+    expect(meAfter.status).toBe(403);
+
+    const audit = await prisma.adminAuditLog.findFirst({
+      where: {
+        action: "staff.role.revoke",
+        resourceId: invitee.id,
+      },
+    });
+    expect(audit).toBeTruthy();
+  });
+
+  it("conflicts when revoking moderator from a non-moderator", async () => {
+    const plain = await createTestUser();
+    const res = await testApp
+      .post(`/api/v1/admin/users/${plain.id}/roles/moderator/revoke`)
+      .set(adminHeaders)
+      .send({});
+    expect(res.status).toBe(409);
+  });
 });

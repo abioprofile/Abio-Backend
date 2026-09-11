@@ -11,6 +11,7 @@ import type {
   TUpdateUserBody,
   TAssignBadgeBody,
   TRevokeBadgeBody,
+  TRevokeModeratorBody,
   TCreateInviteBody,
   TAcceptInviteBody,
   TListInvitesQuery,
@@ -422,6 +423,74 @@ export const revokeBadge = async (
   });
 
   return ServiceResponse.success("Badge revoked successfully", revoked);
+};
+
+/** POST /api/v1/admin/users/:id/roles/moderator/revoke — admin only */
+export const revokeModerator = async (
+  userId: string,
+  body: TRevokeModeratorBody,
+  actorId: string
+) => {
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      roles: { select: { role: { select: { id: true, name: true } } } },
+    },
+  });
+
+  if (!target) {
+    return ServiceResponse.failure(
+      "User not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  const moderatorRole = target.roles.find((r) => r.role.name === "moderator");
+  if (!moderatorRole) {
+    return ServiceResponse.failure(
+      "User does not have the moderator role",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.userRole.delete({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId: moderatorRole.role.id,
+        },
+      },
+    });
+
+    await tx.adminAuditLog.create({
+      data: {
+        adminId: actorId,
+        action: "staff.role.revoke",
+        resourceType: "user",
+        resourceId: userId,
+        oldValue: { role: "moderator" },
+        newValue: {
+          role: "moderator",
+          revoked: true,
+          reason: body.reason ?? null,
+          email: target.email,
+        },
+      },
+    });
+  });
+
+  return ServiceResponse.success("Moderator role revoked successfully", {
+    userId,
+    email: target.email,
+    role: "moderator",
+    revoked: true,
+  });
 };
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

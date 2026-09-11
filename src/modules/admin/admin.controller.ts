@@ -12,6 +12,7 @@ import {
   updateUserSchema,
   assignBadgeSchema,
   revokeBadgeSchema,
+  revokeModeratorSchema,
   createInviteSchema,
   acceptInviteSchema,
   listInvitesSchema,
@@ -70,6 +71,18 @@ export const revokeBadge = catchAsync(
     const serviceResponse = await adminService.revokeBadge(
       params.id,
       params.badgeType,
+      body,
+      req.user!.id
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
+export const revokeModerator = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params, body } = parseRequest(revokeModeratorSchema, req);
+    const serviceResponse = await adminService.revokeModerator(
+      params.id,
       body,
       req.user!.id
     );

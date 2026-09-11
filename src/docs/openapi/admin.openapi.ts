@@ -538,6 +538,46 @@ export const adminPaths = {
     },
   },
 
+  "/api/v1/admin/users/{id}/roles/moderator/revoke": {
+    post: {
+      tags: ["Admin — Users"],
+      summary: "Revoke moderator staff role",
+      description:
+        "**Audience: Admin only.** Removes the `moderator` role from a user. Does not affect `admin` role. Optional `{ reason }`.",
+      security: bearerSecurity,
+      parameters: [uuidPath("id")],
+      requestBody: {
+        required: false,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                reason: { type: "string", maxLength: 500 },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Moderator role revoked",
+          content: serviceResponseContent,
+        },
+        "404": { description: "User not found", content: errorResponseContent },
+        "409": {
+          description: "User is not a moderator",
+          content: errorResponseContent,
+        },
+        "401": { description: "Unauthenticated", content: errorResponseContent },
+        "403": {
+          description: "Admin role required",
+          content: errorResponseContent,
+        },
+      },
+    },
+  },
+
   "/api/v1/admin/invites": {
     post: {
       tags: ["Admin — Invites"],

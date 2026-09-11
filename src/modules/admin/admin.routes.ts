@@ -22,6 +22,13 @@ adminRouter.post(
   adminController.revokeBadge
 );
 
+/** Only admins can grant/revoke moderator staff role */
+adminRouter.post(
+  "/users/:id/roles/moderator/revoke",
+  ...requireAdmin,
+  adminController.revokeModerator
+);
+
 /** Only admins can invite moderators */
 adminRouter.get("/invites", ...requireAdmin, adminController.listInvites);
 adminRouter.post("/invites", ...requireAdmin, adminController.createInvite);
