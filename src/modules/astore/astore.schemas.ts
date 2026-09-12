@@ -2,6 +2,18 @@ import z from "zod";
 
 const productTypeSchema = z.enum(["standard", "custom"]);
 
+export const productMetadataSchema = z.object({
+  tagline: z.string().trim().max(200).default(""),
+  badge: z.string().trim().max(40).default(""),
+  features: z.array(z.string().trim().min(1).max(200)).max(12).default([]),
+  preview: z.object({
+    enabled: z.boolean().default(false),
+    frontOverlayUrl: z.string().url().optional(),
+    backOverlayUrl: z.string().url().optional(),
+    defaultColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#000000"),
+  }).optional(),
+});
+
 export const listProductsSchema = z.object({
   query: z.object({
     page: z.string().optional(),
@@ -19,6 +31,7 @@ export const productIdParamSchema = z.object({
 
 export const createProductSchema = z.object({
   body: z.object({
+    metadata: productMetadataSchema.default({}),
     name: z.string().trim().min(1).max(120),
     slug: z
       .string()
@@ -43,6 +56,7 @@ export const updateProductSchema = z.object({
   }),
   body: z
     .object({
+      metadata: productMetadataSchema.optional(),
       name: z.string().trim().min(1).max(120).optional(),
       slug: z
         .string()

@@ -305,6 +305,7 @@ model BadgeRequest {
 }
 
 model AStoreProduct {
+  metadata Json @default("{}")
   id            String                 @id @default(uuid())
   name          String
   slug          String                 @unique

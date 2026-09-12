@@ -18,6 +18,7 @@ import { STORE_CURRENCY } from "./astore.commerce";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 
 const productSelect = {
+  metadata: true,
   id: true,
   name: true,
   slug: true,
@@ -139,6 +140,7 @@ export const createProduct = async (
   const product = await prisma.$transaction(async (tx) => {
     const created = await tx.aStoreProduct.create({
       data: {
+        metadata: body.metadata,
         name: body.name,
         slug,
         description: body.description,
@@ -212,6 +214,7 @@ export const updateProduct = async (
     const updated = await tx.aStoreProduct.update({
       where: { id },
       data: {
+        ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
         ...(body.description !== undefined
@@ -457,6 +460,7 @@ export const updateVariant = async (
 
 /** Public catalog — only active products + active variants */
 const publicProductSelect = {
+  metadata: true,
   id: true,
   name: true,
   slug: true,
