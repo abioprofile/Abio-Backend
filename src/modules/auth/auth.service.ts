@@ -109,10 +109,7 @@ export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
     },
   });
 
-  if (
-    !user ||
-    !(await comparePassword(credentials.password, user.password))
-  ) {
+  if (!user) {
     throw new UnauthorizedError("Incorrect email or password");
   }
 
@@ -121,6 +118,10 @@ export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
       "Please verify your email address before logging in. Check your inbox for the verification link.",
       StatusCodes.FORBIDDEN
     );
+  }
+
+  if (!(await comparePassword(credentials.password, user.password))) {
+    throw new UnauthorizedError("Incorrect email or password");
   }
 
   if (!user.active) {
@@ -481,3 +482,4 @@ export const verify2FAOtp = async (email: string, code: string) => {
     token: tokens.accessToken,
   });
 };
+
