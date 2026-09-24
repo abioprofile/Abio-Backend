@@ -3,6 +3,7 @@ import {
   errorResponseContent,
   pageLimitParams,
   serviceResponseContent,
+  uuidPath,
 } from "./helpers";
 
 export const settingsSchemas = {
@@ -196,9 +197,19 @@ export const settingsPaths = {
     get: {
       tags: ["Admin — Business Inquiries"],
       summary: "List \"Grow with Abio\" leads",
-      description: "**Audience: Admin / Moderator.**",
+      description:
+        "**Audience: Admin / Moderator.** Search with `q` (matches company name, full name, or email).",
       security: bearerSecurity,
-      parameters: [...pageLimitParams],
+      parameters: [
+        ...pageLimitParams,
+        {
+          name: "q",
+          in: "query",
+          required: false,
+          schema: { type: "string", example: "Acme" },
+          description: "Search company name, full name, or email (case-insensitive)",
+        },
+      ],
       responses: {
         "200": {
           description: "Paginated inquiries (includes submitting user summary)",
@@ -206,6 +217,25 @@ export const settingsPaths = {
         },
         "401": { description: "Unauthenticated", content: errorResponseContent },
         "403": { description: "Not staff", content: errorResponseContent },
+      },
+    },
+  },
+
+  "/api/v1/admin/business-inquiries/{id}": {
+    get: {
+      tags: ["Admin — Business Inquiries"],
+      summary: "Get a single \"Grow with Abio\" lead",
+      description: "**Audience: Admin / Moderator.**",
+      security: bearerSecurity,
+      parameters: [uuidPath("id")],
+      responses: {
+        "200": {
+          description: "Inquiry (includes submitting user summary)",
+          content: serviceResponseContent,
+        },
+        "401": { description: "Unauthenticated", content: errorResponseContent },
+        "403": { description: "Not staff", content: errorResponseContent },
+        "404": { description: "Not found", content: errorResponseContent },
       },
     },
   },

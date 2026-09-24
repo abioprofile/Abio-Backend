@@ -20,3 +20,8 @@ adminBusinessRouter.get(
   ...requireStaff,
   businessController.listAll
 );
+adminBusinessRouter.get(
+  "/business-inquiries/:id",
+  ...requireStaff,
+  businessController.getById
+);

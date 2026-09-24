@@ -35,6 +35,14 @@ export const listBusinessInquiriesSchema = z.object({
   query: z.object({
     page: z.string().optional(),
     limit: z.string().optional(),
+    /** Search company name, full name, or email (case-insensitive) */
+    q: z.string().trim().min(1).optional(),
+  }),
+});
+
+export const businessInquiryIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
   }),
 });
 
