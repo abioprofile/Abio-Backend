@@ -34,6 +34,11 @@ import {
 } from "@/modules/badges/badges.routes";
 import paymentsWebhookRouter from "@/modules/payments/payments.webhook.routes";
 import analyticsRouter from "@/modules/analytics/analytics.routes";
+import settingsRouter from "@/modules/settings/settings.routes";
+import {
+  userBusinessRouter,
+  adminBusinessRouter,
+} from "@/modules/business/business.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -70,6 +75,8 @@ app.use(pp.initialize());
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/user", userBadgesRouter);
 app.use("/api/v1/user", preferencesRouter);
+app.use("/api/v1/user", settingsRouter);
+app.use("/api/v1/user", userBusinessRouter);
 app.use("/api/v1/user", profileRouter);
 
 const router = express.Router();
@@ -83,6 +90,7 @@ app.use("/api/v1", router);
 app.use("/api/v1/themes", themesRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/admin", adminBadgesRouter);
+app.use("/api/v1/admin", adminBusinessRouter);
 app.use("/api/v1/admin/astore", astoreRouter);
 app.use("/api/v1/astore", astorePublicRouter);
 app.use("/api/v1/cart", cartRouter);

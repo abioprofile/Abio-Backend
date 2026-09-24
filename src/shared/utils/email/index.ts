@@ -2,6 +2,7 @@ import { ORGANIZATION_NAME } from "@/shared/utils/constants";
 import { sendMail } from "./transporter";
 import {
   firstNameFrom,
+  linkTapNotificationHtml,
   passwordResetEmailHtml,
   verificationEmailHtml,
   waitlistConfirmationHtml,
@@ -29,6 +30,13 @@ export type WelcomeEmailInput = {
 export type WaitlistEmailInput = {
   to: string;
   name: string;
+};
+
+export type LinkTapNotificationInput = {
+  to: string;
+  name: string;
+  linkTitle: string;
+  linkUrl: string;
 };
 
 /** Low-level senders used by the email worker (and tests). */
@@ -72,6 +80,19 @@ export const sendWaitlistConfirmation = async ({
     to,
     subject: "You've successfully joined the Waitlist!",
     html: waitlistConfirmationHtml(name),
+  });
+};
+
+export const sendLinkTapNotification = async ({
+  to,
+  name,
+  linkTitle,
+  linkUrl,
+}: LinkTapNotificationInput) => {
+  await sendMail({
+    to,
+    subject: "Someone tapped your link",
+    html: linkTapNotificationHtml(firstNameFrom(name), linkTitle, linkUrl),
   });
 };
 

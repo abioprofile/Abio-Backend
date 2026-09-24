@@ -5,6 +5,7 @@ import { adminSchemas, adminPaths } from "./openapi/admin.openapi";
 import { commerceSchemas, commercePaths } from "./openapi/commerce.openapi";
 import { badgesSchemas, badgesPaths } from "./openapi/badges.openapi";
 import { analyticsSchemas, analyticsPaths } from "./openapi/analytics.openapi";
+import { settingsSchemas, settingsPaths } from "./openapi/settings.openapi";
 
 const swaggerDocument = {
   openapi: "3.0.0",
@@ -113,6 +114,14 @@ In production, passwords must be at least 8 characters and include a letter, a n
       description:
         "[User] Request verification (reason + ID document) and check status",
     },
+    {
+      name: "User — Settings",
+      description: "[User] Privacy (profile visibility) and notification preferences",
+    },
+    {
+      name: "User — Business Inquiries",
+      description: "[User] \"Grow with Abio\" lead capture form",
+    },
     // Admin
     {
       name: "Admin — Staff",
@@ -144,6 +153,10 @@ In production, passwords must be at least 8 characters and include a letter, a n
     {
       name: "Admin — Dashboard",
       description: "[Admin/Moderator] Store metrics aggregates",
+    },
+    {
+      name: "Admin — Business Inquiries",
+      description: "[Admin/Moderator] Review \"Grow with Abio\" leads",
     },
     // Payments
     {
@@ -1524,14 +1537,16 @@ Object.assign(
   adminSchemas,
   commerceSchemas,
   badgesSchemas,
-  analyticsSchemas
+  analyticsSchemas,
+  settingsSchemas
 );
 Object.assign(
   swaggerDocument.paths,
   adminPaths,
   commercePaths,
   badgesPaths,
-  analyticsPaths
+  analyticsPaths,
+  settingsPaths
 );
 
 export const setupSwagger = (app: Express) => {

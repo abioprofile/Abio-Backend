@@ -48,6 +48,20 @@ export const welcomeEmailHtml = (firstName: string, url: string) => `
   </div>
 `;
 
+export const linkTapNotificationHtml = (
+  firstName: string,
+  linkTitle: string,
+  linkUrl: string
+) => `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2>Someone tapped your link!</h2>
+    <p>Hi ${firstName},</p>
+    <p>Your link "<strong>${linkTitle}</strong>" (${linkUrl}) was just tapped on your ${ORGANIZATION_NAME} profile.</p>
+    <p style="font-size: 12px; color: #666;">You're receiving this because tap notifications are enabled in Settings &gt; Notifications. You can turn them off there at any time.</p>
+    <p>Best regards,<br>${ORGANIZATION_NAME}</p>
+  </div>
+`;
+
 export const waitlistConfirmationHtml = (name: string) => `<!DOCTYPE html>
 <html lang="en">
   <head>

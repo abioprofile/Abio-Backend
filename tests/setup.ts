@@ -20,6 +20,7 @@ vi.mock("@/queues/queue", () => ({
   enqueueWaitlistConfirmationEmail: vi
     .fn()
     .mockResolvedValue({ id: "test-job" }),
+  enqueueLinkTapNotification: vi.fn().mockResolvedValue({ id: "test-job" }),
 }));
 
 /**
@@ -32,6 +33,7 @@ async function resetDatabase() {
       "admin_audit_logs",
       "admin_invites",
       "badge_requests",
+      "business_inquiries",
       "payments",
       "astore_order_items",
       "astore_orders",

@@ -2,6 +2,7 @@ import type { Job } from "bull";
 import logger from "@/shared/config/logger";
 import {
   sendEmailVerification,
+  sendLinkTapNotification,
   sendPasswordReset,
   sendWaitlistConfirmation,
   sendWelcome,
@@ -38,6 +39,14 @@ emailQueue.process(async (job: Job<EmailJob>) => {
       await sendWaitlistConfirmation({
         to: job.data.to,
         name: job.data.name,
+      });
+      break;
+    case "LINK_TAP_NOTIFICATION":
+      await sendLinkTapNotification({
+        to: job.data.to,
+        name: job.data.name,
+        linkTitle: job.data.linkTitle,
+        linkUrl: job.data.linkUrl,
       });
       break;
     default:

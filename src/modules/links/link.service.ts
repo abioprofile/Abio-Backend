@@ -9,6 +9,8 @@ import {
 import { SOCIAL_PLATFORMS } from "@/shared/utils/constants";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 import cache from "@/lib/cache";
+import logger from "@/shared/config/logger";
+import { enqueueLinkTapNotification } from "@/queues/queue";
 import { utcDay } from "@/modules/analytics/analytics.utils";
 import type {
   TCreateLink,
@@ -235,7 +237,14 @@ export const trackClick = async (linkId: string) => {
     where: { id: linkId },
     include: {
       profile: {
-        select: { id: true, username: true, isPublic: true },
+        select: {
+          id: true,
+          username: true,
+          isPublic: true,
+          user: {
+            select: { email: true, name: true, notifyOnLinkTap: true },
+          },
+        },
       },
     },
   });
@@ -275,6 +284,22 @@ export const trackClick = async (linkId: string) => {
 
   if (link.profile.username) {
     cache.del(`public_profiles:${link.profile.username}`);
+  }
+
+  if (link.profile.user.notifyOnLinkTap) {
+    try {
+      await enqueueLinkTapNotification({
+        to: link.profile.user.email,
+        name: link.profile.user.name,
+        linkTitle: link.title,
+        linkUrl: link.url,
+      });
+    } catch (error) {
+      logger.error(
+        { err: error, linkId },
+        "Failed to enqueue link tap notification email"
+      );
+    }
   }
 
   return ServiceResponse.success("Click tracked", { recorded: true });

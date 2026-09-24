@@ -77,6 +77,8 @@ model User {
   displayPreferences       DisplayPreference[]
   googleId                 String?
   totp_secret              String?
+  /** Settings > Notifications — "New tap notification" */
+  notifyOnLinkTap          Boolean             @default(true)
 
   roles                    UserRole[]
   refreshTokens            RefreshToken[]
@@ -91,6 +93,7 @@ model User {
   adminInviteAccepted      AdminInvite[]       @relation("AdminInviteAccepted")
   adminAuditLogs           AdminAuditLog[]
   cart                     Cart?
+  businessInquiries        BusinessInquiry[]
 
   @@map("users")
 }
@@ -302,6 +305,26 @@ model BadgeRequest {
   @@index([status])
   @@index([userId, status])
   @@map("badge_requests")
+}
+
+/** Settings > Account > "Grow with Abio" lead capture form. */
+model BusinessInquiry {
+  id          String   @id @default(uuid())
+  userId      String
+  companyName String
+  fullName    String
+  email       String
+  phone       String
+  companySize String
+  industry    String
+  features    String[] @default([])
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("business_inquiries")
 }
 
 model AStoreProduct {

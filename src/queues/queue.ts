@@ -28,6 +28,13 @@ export type EmailJob =
       type: "WAITLIST_CONFIRMATION";
       to: string;
       name: string;
+    }
+  | {
+      type: "LINK_TAP_NOTIFICATION";
+      to: string;
+      name: string;
+      linkTitle: string;
+      linkUrl: string;
     };
 
 /** Pass the full Redis URL — Bull parses host/port/db from it. */
@@ -55,6 +62,10 @@ export const enqueueWelcomeEmail = (
 export const enqueueWaitlistConfirmationEmail = (
   data: Omit<Extract<EmailJob, { type: "WAITLIST_CONFIRMATION" }>, "type">
 ) => emailQueue.add({ type: "WAITLIST_CONFIRMATION", ...data });
+
+export const enqueueLinkTapNotification = (
+  data: Omit<Extract<EmailJob, { type: "LINK_TAP_NOTIFICATION" }>, "type">
+) => emailQueue.add({ type: "LINK_TAP_NOTIFICATION", ...data });
 
 /** Periodic job — expire abandoned pending payments and restock. */
 export type PaymentExpiryJob = { type: "EXPIRE_PENDING_PAYMENTS" };
