@@ -21,6 +21,13 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   return handleServiceResponse(response, res);
 });
 
+export const getMine = catchAsync(async (req: Request, res: Response) => {
+  const response = await businessService.getMine(
+    (req as AuthenticatedRequest).user.id
+  );
+  return handleServiceResponse(response, res);
+});
+
 export const listAll = catchAsync(async (req: Request, res: Response) => {
   const { query } = parseRequest(listBusinessInquiriesSchema, req);
   const response = await businessService.listAll(query);

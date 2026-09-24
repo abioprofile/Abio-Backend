@@ -10,6 +10,11 @@ userBusinessRouter.post(
   authenticate,
   businessController.create
 );
+userBusinessRouter.get(
+  "/business-inquiries/me",
+  authenticate,
+  businessController.getMine
+);
 
 /** Sales/staff review of submitted leads — mount under /api/v1/admin */
 export const adminBusinessRouter = Router();

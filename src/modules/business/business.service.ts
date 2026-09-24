@@ -69,6 +69,19 @@ export const listAll = async (query: TListBusinessInquiriesQuery) => {
   });
 };
 
+/** GET /api/v1/user/business-inquiries/me — latest "Grow with Abio" lead the caller submitted, if any */
+export const getMine = async (userId: string) => {
+  const inquiry = await prisma.businessInquiry.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return ServiceResponse.success(
+    "Business inquiry retrieved successfully",
+    inquiry
+  );
+};
+
 /** GET /api/v1/admin/business-inquiries/:id */
 export const getById = async (id: string) => {
   const inquiry = await prisma.businessInquiry.findUnique({
