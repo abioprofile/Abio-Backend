@@ -8,7 +8,7 @@ import {
 } from "@/shared/utils/errors";
 import { SOCIAL_PLATFORMS } from "@/shared/utils/constants";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
-import cache from "@/lib/cache";
+import { bustPublicProfileCache } from "@/modules/profiles/profile.service";
 import logger from "@/shared/config/logger";
 import { enqueueLinkTapNotification } from "@/queues/queue";
 import { utcDay } from "@/modules/analytics/analytics.utils";
@@ -75,6 +75,8 @@ export const create = async (userId: string, data: TCreateLink) => {
       },
     });
   });
+
+  await bustPublicProfileCache(profile.username);
 
   return ServiceResponse.success(
     "Link created successfully",
@@ -170,6 +172,8 @@ export const update = async (
     data: updateData,
   });
 
+  await bustPublicProfileCache(link.profile.username);
+
   return ServiceResponse.success("Link updated successfully", updatedLink);
 };
 
@@ -178,6 +182,9 @@ export const deleteLink = async (linkId: string, userId: string) => {
     where: {
       id: linkId,
       profile: { userId },
+    },
+    include: {
+      profile: { select: { username: true } },
     },
   });
 
@@ -191,6 +198,8 @@ export const deleteLink = async (linkId: string, userId: string) => {
   await prisma.link.delete({
     where: { id: linkId },
   });
+
+  await bustPublicProfileCache(link.profile.username);
 
   return ServiceResponse.success("Link deleted successfully", null);
 };
@@ -228,6 +237,8 @@ export const reorder = async (userId: string, data: TReorderLinks) => {
       })
     )
   );
+
+  await bustPublicProfileCache(profile.username);
 
   return ServiceResponse.success("Links reordered successfully", null);
 };
@@ -282,9 +293,7 @@ export const trackClick = async (linkId: string) => {
     });
   });
 
-  if (link.profile.username) {
-    cache.del(`public_profiles:${link.profile.username}`);
-  }
+  await bustPublicProfileCache(link.profile.username);
 
   if (link.profile.user.notifyOnLinkTap) {
     try {
@@ -307,9 +316,27 @@ export const trackClick = async (linkId: string) => {
 
 export const updateLinkIcon = async (
   linkId: string,
+  userId: string,
   file: Buffer<ArrayBufferLike>,
   mimetype?: string
 ) => {
+  const link = await prisma.link.findFirst({
+    where: {
+      id: linkId,
+      profile: { userId },
+    },
+    include: {
+      profile: { select: { username: true } },
+    },
+  });
+
+  if (!link) {
+    throw new AppError(
+      "Link not found or you don't have permission",
+      StatusCodes.NOT_FOUND
+    );
+  }
+
   try {
     const uploaded = await uploadToCloudinary(file, "icon_urls", mimetype);
 
@@ -319,6 +346,8 @@ export const updateLinkIcon = async (
         icon_link: uploaded.url,
       },
     });
+
+    await bustPublicProfileCache(link.profile.username);
 
     return ServiceResponse.success("", data);
   } catch (error: any) {

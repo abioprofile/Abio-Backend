@@ -12,6 +12,7 @@ import {
   buildEmailVerificationUrl,
   createRawToken,
 } from "@/modules/auth/auth.tokens";
+import { bustPublicProfileCache } from "@/modules/profiles/profile.service";
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -72,13 +73,22 @@ export const update = async (data: {
     include: { profile: true },
   });
 
+  await bustPublicProfileCache(updatedUser.profile?.username);
+
   return ServiceResponse.success("User updated successfully", updatedUser);
 };
 
 export const deleteUser = async (id: string): Promise<ServiceResponse<null>> => {
+  const profile = await prisma.profile.findUnique({
+    where: { userId: id },
+    select: { username: true },
+  });
+
   await prisma.user.delete({
     where: { id },
   });
+
+  await bustPublicProfileCache(profile?.username);
 
   return ServiceResponse.success(
     "User deleted successfully",

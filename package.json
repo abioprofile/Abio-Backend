@@ -24,7 +24,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "predev": "prisma migrate deploy && prisma generate",
-    "db:check": "node scripts/check-commerce-schema.cjs"
+    "db:check": "node scripts/check-commerce-schema.cjs",
+    "images:rehost": "tsx scripts/rehost-external-images.ts"
   },
   "dependencies": {
     "@otplib/plugin-base32-scure": "^13.4.0",

@@ -1,4 +1,5 @@
 import z from "zod";
+import { zCloudinaryUrl } from "@/shared/utils/zod/cloudinaryUrl";
 
 const productTypeSchema = z.enum(["standard", "custom"]);
 
@@ -8,8 +9,8 @@ export const productMetadataSchema = z.object({
   features: z.array(z.string().trim().min(1).max(200)).max(12).default([]),
   preview: z.object({
     enabled: z.boolean().default(false),
-    frontOverlayUrl: z.string().url().optional(),
-    backOverlayUrl: z.string().url().optional(),
+    frontOverlayUrl: zCloudinaryUrl.optional(),
+    backOverlayUrl: zCloudinaryUrl.optional(),
     defaultColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#000000"),
   }).optional(),
 });
@@ -45,7 +46,7 @@ export const createProductSchema = z.object({
     /** Shop is NGN-only; omitted or must be NGN */
     currency: z.literal("NGN").default("NGN"),
     basePriceKobo: z.number().int().min(0),
-    imageUrls: z.array(z.string().url()).max(10).default([]),
+    imageUrls: z.array(zCloudinaryUrl).max(10).default([]),
     active: z.boolean().optional(),
   }),
 });
@@ -69,7 +70,7 @@ export const updateProductSchema = z.object({
       type: productTypeSchema.optional(),
       currency: z.literal("NGN").optional(),
       basePriceKobo: z.number().int().min(0).optional(),
-      imageUrls: z.array(z.string().url()).max(10).optional(),
+      imageUrls: z.array(zCloudinaryUrl).max(10).optional(),
       active: z.boolean().optional(),
     })
     .refine((b) => Object.keys(b).length > 0, {
@@ -88,7 +89,7 @@ export const createVariantSchema = z.object({
       .trim()
       .regex(/^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/)
       .optional(),
-    imageUrls: z.array(z.string().url()).max(10).default([]),
+    imageUrls: z.array(zCloudinaryUrl).max(10).default([]),
     stockQty: z.number().int().min(0).default(0),
     priceKobo: z.number().int().min(0).nullable().optional(),
     active: z.boolean().optional(),
@@ -109,7 +110,7 @@ export const updateVariantSchema = z.object({
         .regex(/^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/)
         .nullable()
         .optional(),
-      imageUrls: z.array(z.string().url()).max(10).optional(),
+      imageUrls: z.array(zCloudinaryUrl).max(10).optional(),
       stockQty: z.number().int().min(0).optional(),
       priceKobo: z.number().int().min(0).nullable().optional(),
       active: z.boolean().optional(),

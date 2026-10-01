@@ -1,4 +1,5 @@
 import z from "zod";
+import { zCloudinaryUrl } from "@/shared/utils/zod/cloudinaryUrl";
 
 const hexColor = z
   .string()
@@ -51,7 +52,7 @@ const gradientStopSchema = z.object({
 export const wallpaperConfigSchema = z
   .object({
     type: z.enum(["fill", "solid", "gradient", "image"]),
-    image: z.string().url().optional(),
+    image: zCloudinaryUrl.optional(),
     backgroundColor: z.union([hexColor, z.array(gradientStopSchema)]).optional(),
   })
   .superRefine((data, ctx) => {

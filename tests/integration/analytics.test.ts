@@ -8,8 +8,10 @@ import { utcDay } from "@/modules/analytics/analytics.utils";
 vi.mock("@/lib/cache", () => ({
   default: {
     get: vi.fn().mockResolvedValue(null),
+    mget: vi.fn().mockResolvedValue([null, null]),
     setex: vi.fn().mockResolvedValue("OK"),
     del: vi.fn().mockResolvedValue(1),
+    incr: vi.fn().mockResolvedValue(1),
   },
 }));
 

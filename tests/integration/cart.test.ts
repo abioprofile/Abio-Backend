@@ -5,6 +5,7 @@ import {
   authHeader,
   createAdminUser,
   createTestUser,
+  cloudinaryTestUrl,
 } from "../helpers/factories";
 
 vi.mock("@/shared/utils/cloudinary", () => ({
@@ -175,7 +176,7 @@ describe("Cart API", () => {
       .send({
         productId: custom.body.data.id,
         customUsername: "one",
-        artworkUrl: "https://cdn.example.com/a.png",
+        artworkUrl: cloudinaryTestUrl("a.png"),
       });
 
     const second = await testApp
@@ -184,7 +185,7 @@ describe("Cart API", () => {
       .send({
         productId: custom.body.data.id,
         customUsername: "one",
-        artworkUrl: "https://cdn.example.com/b.png",
+        artworkUrl: cloudinaryTestUrl("b.png"),
       });
 
     expect(second.status).toBe(201);

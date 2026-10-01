@@ -1,4 +1,5 @@
 import z from "zod";
+import { zCloudinaryUrl } from "@/shared/utils/zod/cloudinaryUrl";
 
 export const addCartItemSchema = z.object({
   body: z.object({
@@ -8,7 +9,7 @@ export const addCartItemSchema = z.object({
     customUsername: z.string().trim().min(1).max(80).optional(),
     preferredColor: z.string().trim().min(1).max(80).optional(),
     instructions: z.string().trim().max(1000).optional(),
-    artworkUrl: z.string().url().optional(),
+    artworkUrl: zCloudinaryUrl.optional(),
   }),
 });
 
@@ -22,7 +23,7 @@ export const updateCartItemSchema = z.object({
       customUsername: z.string().trim().min(1).max(80).nullable().optional(),
       preferredColor: z.string().trim().min(1).max(80).nullable().optional(),
       instructions: z.string().trim().max(1000).nullable().optional(),
-      artworkUrl: z.string().url().nullable().optional(),
+      artworkUrl: zCloudinaryUrl.nullable().optional(),
     })
     .refine((b) => Object.keys(b).length > 0, {
       message: "At least one field is required",

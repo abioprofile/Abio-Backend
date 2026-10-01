@@ -5,6 +5,7 @@ import {
   authHeader,
   createAdminUser,
   createTestUser,
+  cloudinaryTestUrl,
 } from "../helpers/factories";
 
 const ASTORE = "/api/v1/admin/astore";
@@ -143,7 +144,7 @@ describe("Admin Astore API", () => {
         colorHex: "#000000",
         stockQty: 10,
         priceKobo: 520000,
-        imageUrls: ["https://cdn.example.com/black.png"],
+        imageUrls: [cloudinaryTestUrl("black.png")],
       });
 
     expect(created.status).toBe(201);
@@ -204,12 +205,12 @@ describe("Admin Astore API", () => {
         name: "Slug Edit Tee",
         type: "standard",
         basePriceKobo: 100000,
-        imageUrls: ["https://cdn.example.com/p1.png"],
+        imageUrls: [cloudinaryTestUrl("p1.png")],
       });
 
     expect(created.status).toBe(201);
     expect(created.body.data.imageUrls).toEqual([
-      "https://cdn.example.com/p1.png",
+      cloudinaryTestUrl("p1.png"),
     ]);
 
     const updated = await testApp
@@ -218,8 +219,8 @@ describe("Admin Astore API", () => {
       .send({
         slug: "slug-edit-tee-v2",
         imageUrls: [
-          "https://cdn.example.com/p1.png",
-          "https://cdn.example.com/p2.png",
+          cloudinaryTestUrl("p1.png"),
+          cloudinaryTestUrl("p2.png"),
         ],
       });
 

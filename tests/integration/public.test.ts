@@ -7,8 +7,10 @@ import cache from "@/lib/cache";
 vi.mock("@/lib/cache", () => ({
   default: {
     get: vi.fn().mockResolvedValue(null),
+    mget: vi.fn().mockResolvedValue([null, null]),
     setex: vi.fn().mockResolvedValue("OK"),
     del: vi.fn().mockResolvedValue(1),
+    incr: vi.fn().mockResolvedValue(1),
   },
 }));
 
@@ -100,7 +102,10 @@ describe("Public API", () => {
     expect(before.body.data.links[0].clickCount).toBe(0);
 
     // Simulate a warm cache with the stale payload from the first fetch
-    vi.mocked(cache.get).mockResolvedValueOnce(JSON.stringify(before.body.data));
+    vi.mocked(cache.mget).mockResolvedValueOnce([
+      JSON.stringify({ v: "0", data: before.body.data }),
+      null,
+    ]);
 
     const stale = await testApp.get(`${USER}/${username}`);
     expect(stale.body.data.links[0].clickCount).toBe(0);
@@ -109,7 +114,7 @@ describe("Public API", () => {
     expect(cache.del).toHaveBeenCalledWith(`public_profiles:${username}`);
 
     // Cache miss after bust → DB has incremented count
-    vi.mocked(cache.get).mockResolvedValueOnce(null);
+    vi.mocked(cache.mget).mockResolvedValueOnce([null, "1"]);
 
     const after = await testApp.get(`${USER}/${username}`);
     expect(after.status).toBe(200);

@@ -24,6 +24,7 @@ themesRouter.patch(
   "/:id",
   authenticate,
   hasRole(["admin", "moderator"]),
+  uploadImage.single("wallpaper_config[image]"),
   themesController.update,
 );
 themesRouter.delete(

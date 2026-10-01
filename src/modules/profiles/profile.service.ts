@@ -10,9 +10,24 @@ import {
 } from "@/shared/utils/cloudinary";
 import cache from "@/lib/cache";
 
-const bustPublicProfileCache = async (username: string | null | undefined) => {
+const PUBLIC_PROFILE_TTL_SECONDS = 60 * 60;
+
+const publicProfileKey = (username: string) => `public_profiles:${username}`;
+const publicProfileVersionKey = (username: string) =>
+  `public_profiles_version:${username}`;
+
+/**
+ * Call after the DB write has committed. Bumping the version rejects any
+ * entry a concurrent reader computed from pre-update data and writes late.
+ */
+export const bustPublicProfileCache = async (
+  username: string | null | undefined
+) => {
   if (username) {
-    await cache.del(`public_profiles:${username}`);
+    await Promise.all([
+      cache.incr(publicProfileVersionKey(username)),
+      cache.del(publicProfileKey(username)),
+    ]);
   }
 };
 
@@ -51,6 +66,11 @@ export const update = async (
     }
   }
 
+  const previous = await prisma.profile.findUnique({
+    where: { userId },
+    select: { username: true },
+  });
+
   if (data.displayName) {
     await prisma.user.update({
       where: { id: userId },
@@ -80,17 +100,30 @@ export const update = async (
     });
   }
 
+  await bustPublicProfileCache(previous?.username);
+  if (profile.username !== previous?.username) {
+    await bustPublicProfileCache(profile.username);
+  }
+
   return ServiceResponse.success("Profile updated successfully", profile);
 };
 
 export const getPublicByUsername = async (username: string) => {
-  const data = await cache.get(`public_profiles:${username}`);
+  const [cached, storedVersion] = await cache.mget(
+    publicProfileKey(username),
+    publicProfileVersionKey(username)
+  );
+  // Read the version before the DB so the entry we write is tagged with it
+  const version = storedVersion ?? "0";
 
-  if (data) {
-    return ServiceResponse.success(
-      "Profile retrieved successfully",
-      JSON.parse(data)
-    );
+  if (cached) {
+    const entry = JSON.parse(cached);
+    if (entry?.v === version) {
+      return ServiceResponse.success(
+        "Profile retrieved successfully",
+        entry.data
+      );
+    }
   }
 
   const profile = await prisma.profile.findUnique({
@@ -124,9 +157,9 @@ export const getPublicByUsername = async (username: string) => {
   }
 
   cache.setex(
-    `public_profiles:${username}`,
-    60 * 60,
-    JSON.stringify(profile)
+    publicProfileKey(username),
+    PUBLIC_PROFILE_TTL_SECONDS,
+    JSON.stringify({ v: version, data: profile })
   );
   return ServiceResponse.success("Profile retrieved successfully", profile);
 };

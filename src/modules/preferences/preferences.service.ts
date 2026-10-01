@@ -1,15 +1,13 @@
-import cache from "@/lib/cache";
 import type { TUpdatePreferences } from "./preferences.schemas";
 import { prisma } from "@/shared/config/database";
-import { profileService } from "@/modules/profiles/profile.service";
+import {
+  bustPublicProfileCache,
+  profileService,
+} from "@/modules/profiles/profile.service";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import { StatusCodes } from "http-status-codes";
 import { uploadToCloudinary } from "@/shared/utils/cloudinary";
 import AppError from "@/shared/utils/appError";
-
-const bustCache = (username: string | null | undefined) => {
-  if (username) cache.del(`public_profiles:${username}`);
-};
 
 export const getPreferences = async (userId: string) => {
   const settings = await prisma.displayPreference.findFirst({
@@ -70,7 +68,7 @@ export const updatePreferences = async (
     include: { profile: true },
   });
 
-  bustCache(settings.profile.username);
+  await bustPublicProfileCache(settings.profile.username);
 
   return ServiceResponse.success(
     "Preferences updated successfully",

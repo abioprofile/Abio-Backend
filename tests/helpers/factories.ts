@@ -65,3 +65,8 @@ export async function createAdminUser(input: CreateTestUserInput = {}) {
   return user;
 }
 
+
+/** Delivery URL on the configured Cloudinary account (passes zCloudinaryUrl). */
+export function cloudinaryTestUrl(path: string) {
+  return `https://res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/image/upload/${path}`;
+}

@@ -1,4 +1,5 @@
 import z from "zod";
+import { zCloudinaryUrl } from "@/shared/utils/zod/cloudinaryUrl";
 
 export const checkUsernameSchema = z.object({
   query: z.object({
@@ -44,7 +45,7 @@ export const updateProfileSchema = z.object({
         )
         .max(10, "Maximum 10 goals allowed")
         .optional(),
-      avatarUrl: z.string().url("Invalid avatar URL").optional(),
+      avatarUrl: zCloudinaryUrl.optional(),
       isPublic: z.boolean().optional(),
     })
     .partial(),

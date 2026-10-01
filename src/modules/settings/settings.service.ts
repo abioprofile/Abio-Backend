@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "@/shared/config/database";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
-import cache from "@/lib/cache";
+import { bustPublicProfileCache } from "@/modules/profiles/profile.service";
 import type { TUpdateNotifications, TUpdatePrivacy } from "./settings.schemas";
 
 /** GET /api/v1/user/settings/privacy */
@@ -48,9 +48,7 @@ export const updatePrivacy = async (
     select: { isPublic: true, username: true },
   });
 
-  if (profile.username) {
-    cache.del(`public_profiles:${profile.username}`);
-  }
+  await bustPublicProfileCache(profile.username);
 
   return ServiceResponse.success("Privacy settings updated", {
     visibility: profile.isPublic ? "public" : "private",
