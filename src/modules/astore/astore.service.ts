@@ -15,7 +15,10 @@ import type {
 } from "./astore.schemas";
 import type { TListPublicProductsQuery } from "./astore.public.schemas";
 import { STORE_CURRENCY } from "./astore.commerce";
-import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "@/shared/utils/cloudinary";
 
 const productSelect = {
   metadata: true,
@@ -282,29 +285,105 @@ export const uploadProductImage = async (
     mimetype
   );
 
-  const product = await prisma.$transaction(async (tx) => {
-    const updated = await tx.aStoreProduct.update({
-      where: { id: productId },
-      data: { imageUrls: { push: url } },
-      select: productSelect,
-    });
+  let product;
+  try {
+    product = await prisma.$transaction(async (tx) => {
+      // Lock the row so concurrent uploads cannot both pass the 10-image cap
+      const [locked] = await tx.$queryRaw<{ count: number }[]>`
+        SELECT cardinality("imageUrls")::int AS count
+        FROM astore_products WHERE id = ${productId} FOR UPDATE`;
+      if (!locked) return null;
+      if (locked.count >= 10) return "full" as const;
 
-    await tx.adminAuditLog.create({
+      const updated = await tx.aStoreProduct.update({
+        where: { id: productId },
+        data: { imageUrls: { push: url } },
+        select: productSelect,
+      });
+
+      await tx.adminAuditLog.create({
+        data: {
+          adminId: actorId,
+          action: "astore.product.image.upload",
+          resourceType: "astore_product",
+          resourceId: productId,
+          newValue: { url, publicId },
+        },
+      });
+
+      return updated;
+    });
+  } catch (error) {
+    void deleteFromCloudinary(publicId);
+    throw error;
+  }
+
+  if (product === null || product === "full") {
+    void deleteFromCloudinary(publicId);
+    return product === null
+      ? ServiceResponse.failure("Product not found", null, StatusCodes.NOT_FOUND)
+      : ServiceResponse.failure(
+          "Product already has the maximum of 10 images",
+          null,
+          StatusCodes.CONFLICT
+        );
+  }
+
+  return ServiceResponse.success(
+    "Product image uploaded successfully",
+    { url, publicId, product },
+    StatusCodes.CREATED
+  );
+};
+
+/**
+ * POST /api/v1/admin/astore/products/:id/assets
+ * Upload only — the caller saves the returned URL on a variant's `imageUrls`
+ * or on `metadata.preview` overlays. Nothing on the product changes here.
+ */
+export const uploadProductAsset = async (
+  productId: string,
+  fileBuffer: Buffer,
+  actorId: string,
+  mimetype?: string
+) => {
+  const existing = await prisma.aStoreProduct.findUnique({
+    where: { id: productId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return ServiceResponse.failure(
+      "Product not found",
+      null,
+      StatusCodes.NOT_FOUND
+    );
+  }
+
+  const { url, publicId } = await uploadToCloudinary(
+    fileBuffer,
+    "astore-products",
+    mimetype
+  );
+
+  try {
+    await prisma.adminAuditLog.create({
       data: {
         adminId: actorId,
-        action: "astore.product.image.upload",
+        action: "astore.product.asset.upload",
         resourceType: "astore_product",
         resourceId: productId,
         newValue: { url, publicId },
       },
     });
-
-    return updated;
-  });
+  } catch (error) {
+    void deleteFromCloudinary(publicId);
+    throw error;
+  }
 
   return ServiceResponse.success(
-    "Product image uploaded successfully",
-    { url, publicId, product },
+    "Product asset uploaded successfully",
+    { url, publicId },
     StatusCodes.CREATED
   );
 };

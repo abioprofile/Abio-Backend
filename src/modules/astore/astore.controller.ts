@@ -103,6 +103,22 @@ export const uploadProductImage = catchAsync(
   }
 );
 
+export const uploadProductAsset = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { params } = parseRequest(productIdParamSchema, req);
+    if (!req.file?.buffer) {
+      throw new AppError("Image file is required", StatusCodes.BAD_REQUEST);
+    }
+    const serviceResponse = await astoreService.uploadProductAsset(
+      params.id,
+      req.file.buffer,
+      req.user!.id,
+      req.file.mimetype
+    );
+    return handleServiceResponse(serviceResponse, res);
+  }
+);
+
 export const getMetrics = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const { query } = parseRequest(metricsQuerySchema, req);

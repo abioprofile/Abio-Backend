@@ -741,6 +741,102 @@ export const adminPaths = {
     },
   },
 
+  "/api/v1/admin/astore/products/{id}/images": {
+    post: {
+      tags: ["Admin — AStore Catalog"],
+      summary: "Upload product gallery image",
+      description:
+        "**Audience: Admin / Moderator.** Uploads to Cloudinary and appends the URL to the product's `imageUrls` (max 10). Returns `{ url, publicId, product }`. Audited as `astore.product.image.upload`.",
+      security: bearerSecurity,
+      parameters: [uuidPath("id", "Product id")],
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              required: ["image"],
+              properties: {
+                image: {
+                  type: "string",
+                  format: "binary",
+                  description: "Image file (max 5MB)",
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "201": {
+          description: "Image uploaded and added to the gallery",
+          content: serviceResponseContent,
+        },
+        "400": {
+          description: "Missing or invalid image file",
+          content: errorResponseContent,
+        },
+        "404": {
+          description: "Product not found",
+          content: errorResponseContent,
+        },
+        "413": { description: "File larger than 5MB", content: errorResponseContent },
+        "401": { description: "Unauthenticated", content: errorResponseContent },
+        "403": { description: "Not staff", content: errorResponseContent },
+        "409": {
+          description: "Product already has 10 images",
+          content: errorResponseContent,
+        },
+      },
+    },
+  },
+
+  "/api/v1/admin/astore/products/{id}/assets": {
+    post: {
+      tags: ["Admin — AStore Catalog"],
+      summary: "Upload product asset (variant image or preview overlay)",
+      description:
+        "**Audience: Admin / Moderator.** Uploads to Cloudinary and returns `{ url, publicId }` without changing the product. Save the URL on a variant's `imageUrls` or on `metadata.preview.frontOverlayUrl` / `backOverlayUrl`. Audited as `astore.product.asset.upload`.",
+      security: bearerSecurity,
+      parameters: [uuidPath("id", "Product id")],
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              required: ["image"],
+              properties: {
+                image: {
+                  type: "string",
+                  format: "binary",
+                  description: "Image file (max 5MB)",
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "201": {
+          description: "Asset uploaded",
+          content: serviceResponseContent,
+        },
+        "400": {
+          description: "Missing or invalid image file",
+          content: errorResponseContent,
+        },
+        "404": {
+          description: "Product not found",
+          content: errorResponseContent,
+        },
+        "413": { description: "File larger than 5MB", content: errorResponseContent },
+        "401": { description: "Unauthenticated", content: errorResponseContent },
+        "403": { description: "Not staff", content: errorResponseContent },
+      },
+    },
+  },
+
   "/api/v1/admin/astore/products/{id}/variants": {
     post: {
       tags: ["Admin — AStore Catalog"],

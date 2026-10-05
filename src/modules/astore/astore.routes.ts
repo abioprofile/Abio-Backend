@@ -25,6 +25,12 @@ astoreRouter.post(
   astoreController.uploadProductImage
 );
 astoreRouter.post(
+  "/products/:id/assets",
+  ...requireStaff,
+  uploadImage.single("image"),
+  astoreController.uploadProductAsset
+);
+astoreRouter.post(
   "/products/:id/variants",
   ...requireStaff,
   astoreController.createVariant

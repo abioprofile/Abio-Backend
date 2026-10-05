@@ -4,6 +4,7 @@ import { ServiceResponse } from "@/shared/utils/serviceResponse";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
 import { Prisma } from "@prisma/client";
 
 export const unexpectedRequest: RequestHandler = (_req, res) => {
@@ -47,6 +48,17 @@ export const globalErrorHandler: ErrorRequestHandler = (
   } else if (err instanceof SyntaxError && err.message.includes("JSON")) {
     errorMessage = "Invalid JSON format. Please check your request body.";
     statusCode = StatusCodes.BAD_REQUEST;
+  } else if (err instanceof MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      errorMessage = "File is too large. Maximum size is 5MB.";
+      statusCode = StatusCodes.REQUEST_TOO_LONG;
+    } else if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      errorMessage = `Unexpected file field "${err.field}"`;
+      statusCode = StatusCodes.BAD_REQUEST;
+    } else {
+      errorMessage = err.message;
+      statusCode = StatusCodes.BAD_REQUEST;
+    }
   } else if (err instanceof ZodError) {
     errorMessage = err.errors[0]?.message || "Invalid input";
     statusCode = StatusCodes.BAD_REQUEST;
