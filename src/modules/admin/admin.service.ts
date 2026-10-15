@@ -622,12 +622,19 @@ export const createInvite = async (
     return created;
   });
 
-  const adminUrl = env.ADMIN_URL || (env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined);
+  const adminUrl =
+    env.ADMIN_URL ||
+    (env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined);
   const inviteUrl = adminUrl
-    ? new URL(`/admin/accept-invite?token=${encodeURIComponent(raw)}`, adminUrl).toString()
+    ? new URL(
+        `/admin/accept-invite?token=${encodeURIComponent(raw)}`,
+        adminUrl
+      ).toString()
     : null;
   let emailStatus: "sent" | "failed" = "failed";
-  let emailError: string | undefined = inviteUrl ? undefined : "The backend ADMIN_URL is not configured.";
+  let emailError: string | undefined = inviteUrl
+    ? undefined
+    : "The backend ADMIN_URL is not configured.";
   if (inviteUrl) {
     try {
       await sendModeratorInvitation(email, inviteUrl);

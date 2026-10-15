@@ -41,7 +41,22 @@ const envSchema = z
     SMTP_USERNAME: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     CLIENT_URL: z.string().url(),
-    ADMIN_URL: z.string().url().optional(),
+    /**
+     * Admin app origin(s) for invite links.
+     * Comma-separated like CORS_ORIGINS, e.g.
+     * `https://admin.abio.site,https://admin-staging.abio.site`
+     * First URL is used in invitation emails. Empty/unset is allowed.
+     */
+    ADMIN_URL: z
+      .string()
+      .optional()
+      .transform((val) =>
+        (val ?? "")
+          .split(",")
+          .map((url) => url.trim())
+          .filter(Boolean)
+      )
+      .pipe(z.array(z.string().url())),
     GOOGLE_OAUTH_CLIENT_ID: z.string(),
     GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
     GOOGLE_OAUTH_PROJECT_ID: z.string(),
@@ -122,7 +137,14 @@ const data = parsedEnv.data;
 /** Prefer JWT_ACCESS_EXPIRES_IN; fall back to legacy JWT_EXPIRES_IN. */
 export default {
   ...data,
+  /** All parsed admin origins (production, staging, …). */
+  ADMIN_URLS: data.ADMIN_URL,
+  /** Primary admin origin — first entry; used in invite emails. */
+  ADMIN_URL: data.ADMIN_URL[0],
   JWT_ACCESS_EXPIRES_IN:
     data.JWT_ACCESS_EXPIRES_IN || data.JWT_EXPIRES_IN || "15m",
 };
-export type Env = typeof data;
+export type Env = typeof data & {
+  ADMIN_URLS: string[];
+  ADMIN_URL: string | undefined;
+};
