@@ -36,7 +36,9 @@ export const hashPassword = async (password: string): Promise<string> => {
 
 export const findById = async (
   id: string
-): Promise<ServiceResponse<UserWithProfile | null>> => {
+): Promise<
+  ServiceResponse<(UserWithProfile & { isVerified: boolean }) | null>
+> => {
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
@@ -44,6 +46,10 @@ export const findById = async (
         include: {
           display: true,
         },
+      },
+      verificationBadges: {
+        where: { badgeType: "verified", revokedAt: null },
+        select: { id: true },
       },
     },
   });
@@ -56,7 +62,12 @@ export const findById = async (
     );
   }
 
-  return ServiceResponse.success("User retrieved successfully", user);
+  const { verificationBadges, ...rest } = user;
+
+  return ServiceResponse.success("User retrieved successfully", {
+    ...rest,
+    isVerified: verificationBadges.length > 0,
+  } as UserWithProfile & { isVerified: boolean });
 };
 
 export const findByEmail = async (email: string) => {

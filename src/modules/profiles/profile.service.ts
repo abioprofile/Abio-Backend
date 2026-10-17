@@ -143,7 +143,13 @@ export const getPublicByUsername = async (username: string) => {
         orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
       },
       user: {
-        select: { name: true },
+        select: {
+          name: true,
+          verificationBadges: {
+            where: { badgeType: "verified", revokedAt: null },
+            select: { id: true },
+          },
+        },
       },
       display: true,
     },
@@ -156,12 +162,19 @@ export const getPublicByUsername = async (username: string) => {
     );
   }
 
+  const { user, ...rest } = profile;
+  const shaped = {
+    ...rest,
+    user: user ? { name: user.name } : null,
+    isVerified: Boolean(user?.verificationBadges.length),
+  };
+
   cache.setex(
     publicProfileKey(username),
     PUBLIC_PROFILE_TTL_SECONDS,
-    JSON.stringify({ v: version, data: profile })
+    JSON.stringify({ v: version, data: shaped })
   );
-  return ServiceResponse.success("Profile retrieved successfully", profile);
+  return ServiceResponse.success("Profile retrieved successfully", shaped);
 };
 
 export const checkUsernameAvailability = async (username: string) => {
