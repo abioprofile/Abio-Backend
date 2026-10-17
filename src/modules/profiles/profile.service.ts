@@ -8,13 +8,14 @@ import {
   deleteFromCloudinary,
   uploadToCloudinary,
 } from "@/shared/utils/cloudinary";
-import cache from "@/lib/cache";
+import cache, { DEPLOY_ID } from "@/lib/cache";
 
 const PUBLIC_PROFILE_TTL_SECONDS = 60 * 60;
 
-const publicProfileKey = (username: string) => `public_profiles:${username}`;
+const publicProfileKey = (username: string) =>
+  `public_profiles:${DEPLOY_ID}:${username}`;
 const publicProfileVersionKey = (username: string) =>
-  `public_profiles_version:${username}`;
+  `public_profiles_version:${DEPLOY_ID}:${username}`;
 
 /**
  * Call after the DB write has committed. Bumping the version rejects any
