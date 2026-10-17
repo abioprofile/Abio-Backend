@@ -12,6 +12,7 @@ vi.mock("@/lib/cache", () => ({
     del: vi.fn().mockResolvedValue(1),
     incr: vi.fn().mockResolvedValue(1),
   },
+  DEPLOY_ID: "test",
 }));
 
 const PUBLIC = "/api/v1/public";

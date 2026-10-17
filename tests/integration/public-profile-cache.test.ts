@@ -12,6 +12,7 @@ vi.mock("@/lib/cache", () => ({
     del: vi.fn().mockResolvedValue(1),
     incr: vi.fn().mockResolvedValue(1),
   },
+  DEPLOY_ID: "test",
 }));
 
 vi.mock("@/shared/utils/cloudinary", () => ({
@@ -26,7 +27,7 @@ const LINKS = "/api/v1/links";
 const USER = "/api/v1/user";
 
 const keyFor = (username: string | null | undefined) =>
-  `public_profiles:${username}`;
+  `public_profiles:test:${username}`;
 
 const createLink = (profileId: string, url: string, displayOrder = 0) =>
   prisma.link.create({
@@ -180,7 +181,7 @@ describe("Public profile cache invalidation", () => {
       .send({ title: "Renamed" });
 
     expect(cache.incr).toHaveBeenCalledWith(
-      `public_profiles_version:${user.profile!.username}`
+      `public_profiles_version:test:${user.profile!.username}`
     );
   });
 

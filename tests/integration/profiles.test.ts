@@ -11,6 +11,7 @@ vi.mock("@/lib/cache", () => ({
     del: vi.fn().mockResolvedValue(1),
     incr: vi.fn().mockResolvedValue(1),
   },
+  DEPLOY_ID: "test",
 }));
 
 const USER = "/api/v1/user";
@@ -85,10 +86,13 @@ describe("Profiles API", () => {
     expect(res.body.data.bio).toBe("Public bio");
   });
 
-  it("404s for missing or private public profiles", async () => {
+  it("404s for a username that doesn't exist", async () => {
     const missing = await testApp.get(`${USER}/no_such_user_zzz`);
     expect(missing.status).toBe(404);
+    expect(missing.body.message).toBe("Profile not found");
+  });
 
+  it("403s for a private profile", async () => {
     const username = `priv_${Date.now().toString(36)}`;
     const user = await createTestUser();
     await prisma.profile.update({
@@ -97,6 +101,8 @@ describe("Profiles API", () => {
     });
 
     const priv = await testApp.get(`${USER}/${username}`);
-    expect(priv.status).toBe(404);
+    expect(priv.status).toBe(403);
+    expect(priv.body.message).toBe("This account is private");
+    expect(priv.body.data).toBeNull();
   });
 });

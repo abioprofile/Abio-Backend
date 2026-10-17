@@ -20,6 +20,7 @@ vi.mock("@/lib/cache", () => ({
       return 1;
     }),
   },
+  DEPLOY_ID: "test",
 }));
 
 vi.mock("@/shared/utils/email", () => ({

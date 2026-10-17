@@ -128,7 +128,7 @@ export const getPublicByUsername = async (username: string) => {
   }
 
   const profile = await prisma.profile.findUnique({
-    where: { username, isPublic: true },
+    where: { username },
     select: {
       id: true,
       userId: true,
@@ -157,10 +157,11 @@ export const getPublicByUsername = async (username: string) => {
   });
 
   if (!profile) {
-    throw new AppError(
-      "Profile not found or is private",
-      StatusCodes.NOT_FOUND
-    );
+    throw new AppError("Profile not found", StatusCodes.NOT_FOUND);
+  }
+
+  if (!profile.isPublic) {
+    throw new AppError("This account is private", StatusCodes.FORBIDDEN);
   }
 
   const { user, ...rest } = profile;
