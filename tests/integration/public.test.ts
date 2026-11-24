@@ -46,7 +46,7 @@ describe("Public API", () => {
     const updated = await prisma.link.findUnique({ where: { id: link.id } });
     expect(updated?.clickCount).toBe(1);
     expect(cache.del).toHaveBeenCalledWith(
-      `public_profiles:${user.profile!.username}`
+      `public_profiles:test:${user.profile!.username}`
     );
   });
 
@@ -112,7 +112,7 @@ describe("Public API", () => {
     expect(stale.body.data.links[0].clickCount).toBe(0);
 
     await testApp.post(`${PUBLIC}/links/${link.id}/click`);
-    expect(cache.del).toHaveBeenCalledWith(`public_profiles:${username}`);
+    expect(cache.del).toHaveBeenCalledWith(`public_profiles:test:${username}`);
 
     // Cache miss after bust → DB has incremented count
     vi.mocked(cache.mget).mockResolvedValueOnce([null, "1"]);
