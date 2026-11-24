@@ -44,6 +44,35 @@ import {
   isUnclaimedGiftAccount,
 } from "@/modules/gift-accounts/gift-accounts.service";
 
+/**
+ * Find the account for an email typed at sign-in / reset / verification.
+ *
+ * New emails are stored lowercased, but older rows may contain capitals, and
+ * a few addresses exist twice differing only in case. To never pick the wrong
+ * account: exact match first, then the lowercased form, and only then a
+ * case-insensitive match — used only when it is unambiguous.
+ */
+export const resolveLoginUserId = async (
+  rawEmail: string
+): Promise<string | null> => {
+  const email = rawEmail.trim();
+  const byExact = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (byExact) return byExact.id;
+
+  const lower = email.toLowerCase();
+  if (lower !== email) {
+    const byLower = await prisma.user.findUnique({ where: { email: lower }, select: { id: true } });
+    if (byLower) return byLower.id;
+  }
+
+  const matches = await prisma.user.findMany({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true },
+    take: 2,
+  });
+  return matches.length === 1 ? matches[0].id : null;
+};
+
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — link emails need more than OTP window
 
@@ -97,8 +126,9 @@ export type LoginSuccess = {
 };
 
 export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: credentials.email, mode: "insensitive" } },
+  const userId = await resolveLoginUserId(credentials.email);
+  const user = userId && await prisma.user.findUnique({
+    where: { id: userId },
     select: {
       id: true,
       name: true,
@@ -152,8 +182,9 @@ export const refreshSession = async (rawRefreshToken: string) => {
 };
 
 export const forgotPassword = async (data: TForgotPassword): Promise<void> => {
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: data.email, mode: "insensitive" } },
+  const userId = await resolveLoginUserId(data.email);
+  const user = userId && await prisma.user.findUnique({
+    where: { id: userId },
   });
 
   if (!user) {
@@ -332,8 +363,9 @@ export const verifyEmail = async (
 export const resendVerificationEmail = async (
   email: string
 ): Promise<ServiceResponse<null>> => {
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: email, mode: "insensitive" } },
+  const userId = await resolveLoginUserId(email);
+  const user = userId && await prisma.user.findUnique({
+    where: { id: userId },
     include: { profile: true },
   });
 
@@ -457,10 +489,9 @@ export const setup2Fa = async (
 };
 
 export const verify2FAOtp = async (email: string, code: string) => {
-  const user = await prisma.user.findFirst({
-    where: {
-      email: { equals: email.trim(), mode: "insensitive" },
-    },
+  const userId = await resolveLoginUserId(email);
+  const user = userId && await prisma.user.findUnique({
+    where: { id: userId },
     include: {
       profile: true,
       roles: true,

@@ -393,4 +393,28 @@ describe("Auth API", () => {
       .send({ email: "legacy.mixed@example.com", password: "Password123!" });
     expect(login.status).toBe(200);
   });
+
+  it("never mixes up two existing accounts whose emails differ only in case", async () => {
+    await createTestUser({ email: "Twin@Example.com", password: "OldPass123!" });
+    await createTestUser({ email: "twin@example.com", password: "NewPass123!" });
+
+    // Each exact address still reaches its own account, as before.
+    const mixed = await testApp
+      .post(`${AUTH}/login`)
+      .send({ email: "Twin@Example.com", password: "OldPass123!" });
+    expect(mixed.status).toBe(200);
+    expect(mixed.body.data.user.email).toBe("Twin@Example.com");
+
+    const lower = await testApp
+      .post(`${AUTH}/login`)
+      .send({ email: "twin@example.com", password: "NewPass123!" });
+    expect(lower.status).toBe(200);
+    expect(lower.body.data.user.email).toBe("twin@example.com");
+
+    // Any other casing prefers the lowercase account, never a guess.
+    const other = await testApp
+      .post(`${AUTH}/login`)
+      .send({ email: "TWIN@EXAMPLE.COM", password: "OldPass123!" });
+    expect(other.status).toBe(401);
+  });
 });
