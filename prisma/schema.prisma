@@ -94,6 +94,9 @@ model User {
   adminAuditLogs           AdminAuditLog[]
   cart                     Cart?
   businessInquiries        BusinessInquiry[]
+  /** Present when staff created this account as a gift (see GiftAccount). */
+  giftAccount              GiftAccount?        @relation("GiftAccountUser")
+  giftAccountsCreated      GiftAccount[]       @relation("GiftAccountsCreated")
 
   @@map("users")
 }
@@ -522,4 +525,31 @@ model AdminAuditLog {
   @@index([createdAt])
 
   @@map("admin_audit_logs")
+}
+
+/**
+ * Staff-built account handed to a recipient (e.g. with a printed card).
+ * While `claimedAt` is null, staff may edit the profile, links and theme and
+ * nobody can sign in. The recipient claims it with a one-time link (emailed
+ * and/or printed as a QR code) and sets their own password. Only the SHA-256
+ * hash of the claim token is stored.
+ */
+model GiftAccount {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  createdById         String
+  claimTokenHash      String?   @unique
+  claimTokenExpiresAt DateTime? @db.Timestamptz(6)
+  claimedAt           DateTime? @db.Timestamptz(6)
+  /// Set when a staff edit starts; a claim waits until it is older than the edit window.
+  staffEditStartedAt  DateTime? @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(6)
+
+  user      User @relation("GiftAccountUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("GiftAccountsCreated", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([createdById])
+  @@index([claimedAt])
+  @@map("gift_accounts")
 }

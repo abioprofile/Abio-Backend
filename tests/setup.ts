@@ -31,6 +31,7 @@ async function resetDatabase() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "admin_audit_logs",
+      "gift_accounts",
       "admin_invites",
       "badge_requests",
       "business_inquiries",

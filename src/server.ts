@@ -39,6 +39,7 @@ import {
   userBusinessRouter,
   adminBusinessRouter,
 } from "@/modules/business/business.routes";
+import { giftAccountsAdminRouter } from "@/modules/gift-accounts/gift-accounts.routes";
 const app: Express = express();
 
 if (process.env.NODE_ENV === "development") {
@@ -88,6 +89,7 @@ router.use("/public", publicRouter);
 app.use("/api/v1", router);
 
 app.use("/api/v1/themes", themesRouter);
+app.use("/api/v1/admin/gift-accounts", giftAccountsAdminRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/admin", adminBadgesRouter);
 app.use("/api/v1/admin", adminBusinessRouter);

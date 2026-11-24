@@ -2,6 +2,7 @@ import { ORGANIZATION_NAME } from "@/shared/utils/constants";
 import { sendMail } from "./transporter";
 import {
   firstNameFrom,
+  giftAccountClaimHtml,
   linkTapNotificationHtml,
   passwordResetEmailHtml,
   verificationEmailHtml,
@@ -103,5 +104,32 @@ export const sendModeratorInvitation = async (to: string, inviteUrl: string) => 
     to,
     subject: "You're invited to the Abio admin workspace",
     html: `<h1>Join the Abio team</h1><p>You have been invited to join the Abio workspace as a moderator.</p><p><a href="${safeUrl}">Accept invitation</a></p><p>This invitation expires in 7 days. Sign in with a verified account using the email address that received this invitation.</p><p>If you weren't expecting this invitation, you can ignore this email.</p>`,
+  });
+};
+
+export type GiftAccountClaimInput = {
+  to: string;
+  name: string;
+  claimUrl: string;
+  expiresAt: Date;
+};
+
+/** Sent synchronously so staff see whether delivery worked. */
+export const sendGiftAccountClaim = async ({
+  to,
+  name,
+  claimUrl,
+  expiresAt,
+}: GiftAccountClaimInput) => {
+  const expiresOn = expiresAt.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  await sendMail({
+    to,
+    subject: "Your Abio account is ready to claim",
+    html: giftAccountClaimHtml(firstNameFrom(name), claimUrl, expiresOn),
   });
 };

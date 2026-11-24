@@ -7,6 +7,8 @@ export const signupSchema = z.object({
       name: z.string({ required_error: "Name is required" }),
       email: z
         .string({ required_error: "Email is required" })
+        .trim()
+        .toLowerCase()
         .email("Invalid email address"),
       password: z
         .string({ required_error: "Password is required" })
@@ -33,6 +35,8 @@ export const loginSchema = z.object({
       .string({
         required_error: "Email is required",
       })
+      .trim()
+      .toLowerCase()
       .email("Invalid email address"),
     password: z.string({
       required_error: "Password is required",
@@ -46,6 +50,8 @@ export const forgotPasswordSchema = z.object({
       .string({
         required_error: "Email is required",
       })
+      .trim()
+      .toLowerCase()
       .email("Invalid email address"),
   }),
 });
@@ -132,6 +138,8 @@ export const resendVerificationEmailSchema = z.object({
       .string({
         required_error: "Email is required",
       })
+      .trim()
+      .toLowerCase()
       .email("Invalid email address"),
   }),
 });
@@ -139,7 +147,7 @@ export const resendVerificationEmailSchema = z.object({
 export const verify2FaSchema = z.object({
   body: z.object({
     token: z.string().regex(/^\d{6}$/),
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
   }),
 });
 

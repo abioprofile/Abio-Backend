@@ -112,6 +112,22 @@ export const updateEmail = async (
   user: User,
   email: string
 ): Promise<ServiceResponse> => {
+  // Emails are unique regardless of letter case.
+  const taken = await prisma.user.findFirst({
+    where: {
+      email: { equals: email, mode: "insensitive" },
+      id: { not: user.id },
+    },
+    select: { id: true },
+  });
+  if (taken) {
+    return ServiceResponse.failure(
+      "A user with this email already exists.",
+      null,
+      StatusCodes.CONFLICT
+    );
+  }
+
   try {
     const { raw, hash } = createRawToken(32);
 

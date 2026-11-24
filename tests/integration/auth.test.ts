@@ -356,4 +356,41 @@ describe("Auth API", () => {
     expect(res.body.data.secret).toBeTruthy();
     expect(res.body.data.qrcode).toBeTruthy();
   });
+
+  it("treats emails case- and whitespace-insensitively on signup and login", async () => {
+    const res = await testApp.post(`${AUTH}/signup`).send({
+      name: "Case User",
+      email: "  Case.User@Example.COM ",
+      password: "Password123!",
+      passwordConfirm: "Password123!",
+    });
+    expect(res.status).toBe(201);
+    const stored = await prisma.user.findFirstOrThrow({
+      where: { name: "Case User" },
+      select: { id: true, email: true },
+    });
+    expect(stored.email).toBe("case.user@example.com");
+
+    const dup = await testApp.post(`${AUTH}/signup`).send({
+      name: "Dup",
+      email: "CASE.user@example.com",
+      password: "Password123!",
+      passwordConfirm: "Password123!",
+    });
+    expect(dup.status).toBe(409);
+
+    await prisma.user.update({ where: { id: stored.id }, data: { isEmailVerified: true } });
+    const login = await testApp
+      .post(`${AUTH}/login`)
+      .send({ email: " CASE.USER@example.com", password: "Password123!" });
+    expect(login.status).toBe(200);
+  });
+
+  it("still logs in users whose stored email has capitals", async () => {
+    await createTestUser({ email: "Legacy.Mixed@Example.com", password: "Password123!" });
+    const login = await testApp
+      .post(`${AUTH}/login`)
+      .send({ email: "legacy.mixed@example.com", password: "Password123!" });
+    expect(login.status).toBe(200);
+  });
 });

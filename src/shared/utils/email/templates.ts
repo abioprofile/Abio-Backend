@@ -318,3 +318,37 @@ export const waitlistConfirmationHtml = (name: string) => `<!DOCTYPE html>
     </div>
   </body>
 </html>`;
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/** Staff-created gift account: link to claim it and set a password. */
+export const giftAccountClaimHtml = (
+  firstName: string,
+  claimUrl: string,
+  expiresOn: string
+) => {
+  const name = escapeHtml(firstName);
+  const url = escapeHtml(claimUrl);
+  return `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2>Your ${ORGANIZATION_NAME} page is ready</h2>
+    <p>Hi ${name},</p>
+    <p>The ${ORGANIZATION_NAME} team has set up a page for you. Claim it to choose your password, then make it your own.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${url}" style="background-color: #4CAF50; color: white; padding: 14px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+        Claim my account
+      </a>
+    </div>
+    <p style="font-size: 12px; color: #666;">If the button doesn't work, paste this link into your browser:<br/>${url}</p>
+    <p>This link can be used once and expires on ${escapeHtml(expiresOn)}.</p>
+    <p>If you weren't expecting this, you can ignore this email.</p>
+    <p>Best regards,<br>${ORGANIZATION_NAME}</p>
+  </div>
+`;
+};

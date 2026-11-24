@@ -31,7 +31,7 @@ const setupPassport = (passportInstance: PassportStatic) => {
         done: VerifyCallback
       ) => {
         try {
-          const email = profile.emails?.[0]?.value;
+          const email = profile.emails?.[0]?.value?.trim().toLowerCase();
           if (!email) {
             return done(null, false, { message: "GOOGLE_EMAIL_MISSING" });
           }
@@ -44,8 +44,8 @@ const setupPassport = (passportInstance: PassportStatic) => {
             return done(null, byGoogleId as GoogleAuthUser);
           }
 
-          const byEmail = await prisma.user.findUnique({
-            where: { email },
+          const byEmail = await prisma.user.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
           });
 
           // Email already used by password (or other) signup — do not merge

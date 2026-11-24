@@ -5,7 +5,7 @@ export const updateUserSchema = z.object({
   body: z
     .object({
       name: z.string().optional(),
-      email: z.string().email().optional(),
+      email: z.string().trim().toLowerCase().email().optional(),
       phoneNumber: zPhone.optional(),
     })
     .partial(),
@@ -27,7 +27,7 @@ export const deleteAccountSchema = z.object({
 
 export const updateEmailSchema = z.object({
   body: z.object({
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
   }),
 });
 

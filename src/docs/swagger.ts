@@ -6,6 +6,11 @@ import { commerceSchemas, commercePaths } from "./openapi/commerce.openapi";
 import { badgesSchemas, badgesPaths } from "./openapi/badges.openapi";
 import { analyticsSchemas, analyticsPaths } from "./openapi/analytics.openapi";
 import { settingsSchemas, settingsPaths } from "./openapi/settings.openapi";
+import {
+  giftAccountsPaths,
+  giftAccountsSchemas,
+  giftAccountsTags,
+} from "./openapi/gift-accounts.openapi";
 
 const swaggerDocument = {
   openapi: "3.0.0",
@@ -863,7 +868,7 @@ In production, passwords must be at least 8 characters and include a letter, a n
         tags: ["User — Auth"],
         summary: "Reset password with emailed link token",
         description:
-          "Frontend route `/auth/reset-password/:token` extracts the token and POSTs it here with the new password.",
+          "Frontend route `/auth/reset-password/:token` extracts the token and POSTs it here with the new password. Also accepts a gift-account claim token (see Admin — Gift Accounts): the recipient's password is set, the account is marked claimed and a verification email is sent; they can sign in once verified. Returns 409 if staff edited the page within the last minute (try again shortly).",
         requestBody: {
           required: true,
           content: {
@@ -1538,7 +1543,8 @@ Object.assign(
   commerceSchemas,
   badgesSchemas,
   analyticsSchemas,
-  settingsSchemas
+  settingsSchemas,
+  giftAccountsSchemas
 );
 Object.assign(
   swaggerDocument.paths,
@@ -1546,8 +1552,10 @@ Object.assign(
   commercePaths,
   badgesPaths,
   analyticsPaths,
-  settingsPaths
+  settingsPaths,
+  giftAccountsPaths
 );
+swaggerDocument.tags.push(...giftAccountsTags);
 
 export const setupSwagger = (app: Express) => {
   app.use(

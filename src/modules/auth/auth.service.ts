@@ -39,6 +39,10 @@ import {
   revokeAllRefreshTokensForUser,
   rotateRefreshToken,
 } from "./auth.tokens";
+import {
+  claimGiftAccountByToken,
+  isUnclaimedGiftAccount,
+} from "@/modules/gift-accounts/gift-accounts.service";
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — link emails need more than OTP window
@@ -46,8 +50,8 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — link emails need mor
 export const signup = async (
   payload: TSignup
 ): Promise<ServiceResponse<null>> => {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: payload.email },
+  const existingUser = await prisma.user.findFirst({
+    where: { email: { equals: payload.email, mode: "insensitive" } },
     select: { id: true },
   });
 
@@ -62,7 +66,7 @@ export const signup = async (
 
   const user = await prisma.user.create({
     data: {
-      email: payload.email,
+      email: payload.email.trim().toLowerCase(),
       name: payload.name,
       password: payload.password,
       emailVerificationToken: hash,
@@ -93,8 +97,8 @@ export type LoginSuccess = {
 };
 
 export const login = async (credentials: TLogin): Promise<LoginSuccess> => {
-  const user = await prisma.user.findUnique({
-    where: { email: credentials.email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: credentials.email, mode: "insensitive" } },
     select: {
       id: true,
       name: true,
@@ -148,14 +152,22 @@ export const refreshSession = async (rawRefreshToken: string) => {
 };
 
 export const forgotPassword = async (data: TForgotPassword): Promise<void> => {
-  const user = await prisma.user.findUnique({
-    where: { email: data.email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: data.email, mode: "insensitive" } },
   });
 
   if (!user) {
     throw new AppError(
       "There is no user with that email address",
       StatusCodes.NOT_FOUND
+    );
+  }
+
+  // Unclaimed gift accounts can only be taken over with their claim link.
+  if (await isUnclaimedGiftAccount(user.id)) {
+    throw new AppError(
+      "This account hasn't been claimed yet. Use the claim link you received to set it up.",
+      StatusCodes.FORBIDDEN
     );
   }
 
@@ -206,6 +218,8 @@ export const resetPassword = async (data: TResetPassword): Promise<void> => {
   });
 
   if (!user) {
+    // Staff-created gift accounts are claimed through this same page.
+    if (await claimGiftAccountByToken(data.token, data.password)) return;
     throw new AppError("Token is invalid or has expired", StatusCodes.BAD_REQUEST);
   }
 
@@ -318,13 +332,21 @@ export const verifyEmail = async (
 export const resendVerificationEmail = async (
   email: string
 ): Promise<ServiceResponse<null>> => {
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
     include: { profile: true },
   });
 
   if (!user) {
     throw new AppError("No user found with this email", StatusCodes.NOT_FOUND);
+  }
+
+  // Unclaimed gift accounts can only be taken over with their claim link.
+  if (await isUnclaimedGiftAccount(user.id)) {
+    throw new AppError(
+      "This account hasn't been claimed yet. Use the claim link you received to set it up.",
+      StatusCodes.FORBIDDEN
+    );
   }
 
   if (user.isEmailVerified) {
@@ -437,7 +459,7 @@ export const setup2Fa = async (
 export const verify2FAOtp = async (email: string, code: string) => {
   const user = await prisma.user.findFirst({
     where: {
-      email,
+      email: { equals: email.trim(), mode: "insensitive" },
     },
     include: {
       profile: true,
