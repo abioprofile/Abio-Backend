@@ -231,8 +231,12 @@ export const loginWithGoogle = catchAsync(async (req: Request, res: Response) =>
   // Hand the short-lived access token over in the URL fragment (#...), not the
   // query string (?...). Browsers never send the fragment to any server, so the
   // token stays out of server/proxy logs and Referer headers.
+  // The refresh token rides along in the fragment too: the refresh cookie is
+  // cross-site while the API is on *.railway.app, and Safari (and Chrome in
+  // some modes) block it, so Google users got logged out when the 15-minute
+  // access token expired. Email/password login already returns it in the body.
   return res.redirect(
-    `${env.CLIENT_URL}/auth/google/callback#accessToken=${encodeURIComponent(accessToken)}`
+    `${env.CLIENT_URL}/auth/google/callback#accessToken=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`
   );
 });
 

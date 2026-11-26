@@ -6,7 +6,10 @@ import {
   getTotalPages,
 } from "@/shared/utils/pagination";
 import { ServiceResponse } from "@/shared/utils/serviceResponse";
-import { uploadToCloudinary } from "@/shared/utils/cloudinary";
+import {
+  signPrivateDocumentUrl,
+  uploadPrivateDocument,
+} from "@/shared/utils/cloudinary";
 import type {
   TCreateBadgeRequestBody,
   TListBadgeRequestsQuery,
@@ -29,6 +32,12 @@ const requestSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+/** ID documents are private on Cloudinary: swap the stored URL for a short-lived signed link. */
+const withSignedDocument = <T extends { idDocumentUrl: string }>(request: T): T => ({
+  ...request,
+  idDocumentUrl: signPrivateDocumentUrl(request.idDocumentUrl),
+});
 
 const badgeSelect = {
   id: true,
@@ -98,10 +107,9 @@ export const createBadgeRequest = async (
     );
   }
 
-  const uploaded = await uploadToCloudinary(
+  const uploaded = await uploadPrivateDocument(
     file.buffer,
-    "badge-id-documents",
-    file.mimetype
+    "badge-id-documents"
   );
 
   const created = await prisma.badgeRequest.create({
@@ -117,7 +125,7 @@ export const createBadgeRequest = async (
 
   return ServiceResponse.success(
     "Verification request submitted successfully",
-    created,
+    withSignedDocument(created),
     StatusCodes.CREATED
   );
 };
@@ -137,7 +145,7 @@ export const getMyBadgeStatus = async (userId: string) => {
   ]);
 
   return ServiceResponse.success("Badge status retrieved successfully", {
-    latestRequest,
+    latestRequest: latestRequest ? withSignedDocument(latestRequest) : null,
     activeBadge,
     hasActiveBadge: Boolean(activeBadge),
   });
@@ -169,7 +177,7 @@ export const listBadgeRequests = async (query: TListBadgeRequestsQuery) => {
   ]);
 
   return ServiceResponse.success("Badge requests retrieved successfully", {
-    requests,
+    requests: requests.map(withSignedDocument),
     pagination: {
       page,
       limit,
@@ -242,7 +250,10 @@ export const approveBadgeRequest = async (requestId: string, actorId: string) =>
     return { request, badge };
   });
 
-  return ServiceResponse.success("Badge request approved", result);
+  return ServiceResponse.success("Badge request approved", {
+    ...result,
+    request: withSignedDocument(result.request),
+  });
 };
 
 /** POST /api/v1/admin/badge-requests/:id/reject */
@@ -304,5 +315,8 @@ export const rejectBadgeRequest = async (
     return updated;
   });
 
-  return ServiceResponse.success("Badge request rejected", request);
+  return ServiceResponse.success(
+    "Badge request rejected",
+    withSignedDocument(request)
+  );
 };

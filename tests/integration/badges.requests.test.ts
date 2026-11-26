@@ -12,6 +12,11 @@ vi.mock("@/shared/utils/cloudinary", () => ({
     url: "https://cdn.example.com/badge-id-documents/id.webp",
     publicId: "badge-id-documents/id",
   }),
+  uploadPrivateDocument: vi.fn().mockResolvedValue({
+    url: "https://cdn.example.com/badge-id-documents/id.webp",
+    publicId: "badge-id-documents/id",
+  }),
+  signPrivateDocumentUrl: vi.fn((url: string) => url),
   deleteFromCloudinary: vi.fn().mockResolvedValue(undefined),
 }));
 

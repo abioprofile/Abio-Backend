@@ -280,4 +280,103 @@ export const deleteFromCloudinary = async (
   }
 };
 
+/* ------------------------- Private documents (ID docs) ------------------------- */
+
+/** How long a signed link to a private document stays valid. */
+const PRIVATE_LINK_TTL_SECONDS = 15 * 60;
+
+/**
+ * Upload a sensitive file (e.g. a badge ID document) as an `authenticated`
+ * Cloudinary asset. Its stored URL cannot be opened without a signature, so
+ * callers must hand it out through `signPrivateDocumentUrl`.
+ * Original bytes are kept (no sharp) so PDFs and HEIC work as-is.
+ */
+export const uploadPrivateDocument = async (
+  fileBuffer: Buffer,
+  folder: string
+): Promise<{ url: string; publicId: string }> => {
+  if (!fileBuffer?.length) {
+    throw new AppError("Empty file upload", 400);
+  }
+
+  try {
+    const result = await withRetry(
+      () =>
+        new Promise<Awaited<ReturnType<typeof cloudinary.uploader.upload>>>(
+          (resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              {
+                folder,
+                resource_type: "image",
+                type: "authenticated",
+                timeout: 120_000,
+              },
+              (error, res) => {
+                if (error) reject(error);
+                else if (!res) reject(new Error("Empty Cloudinary result"));
+                else resolve(res);
+              }
+            );
+            stream.end(fileBuffer);
+          }
+        )
+    );
+    // Store an unsigned URL: Cloudinary's secure_url embeds a permanent
+    // signature, which would make the stored value a working link if leaked.
+    const url = cloudinary.url(result.public_id, {
+      secure: true,
+      resource_type: "image",
+      type: "authenticated",
+      format: result.format,
+    });
+    return { url, publicId: result.public_id };
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new AppError(
+        "Upload timed out. Please try again with a smaller file.",
+        504
+      );
+    }
+    logger.error({ err: error, folder }, "Private document upload failed");
+    throw new AppError("Upload failed. Please try a JPG, PNG or PDF.", 502);
+  }
+};
+
+/**
+ * Turn a stored private-document URL into a short-lived signed download link.
+ * Older public uploads (`/upload/` URLs) are returned unchanged.
+ */
+export const signPrivateDocumentUrl = (storedUrl: string): string => {
+  try {
+    const { hostname, pathname } = new URL(storedUrl);
+    if (!hostname.includes("cloudinary.com")) return storedUrl;
+
+    const marker = "/image/authenticated/";
+    const idx = pathname.indexOf(marker);
+    if (idx === -1) return storedUrl;
+
+    const parts = pathname
+      .slice(idx + marker.length)
+      .split("/")
+      .filter(Boolean);
+    if (parts.length && /^s--[^/]+--$/.test(parts[0])) parts.shift();
+    if (parts.length && /^v\d+$/.test(parts[0])) parts.shift();
+    if (!parts.length) return storedUrl;
+
+    const last = parts[parts.length - 1];
+    const dot = last.lastIndexOf(".");
+    const format = dot > 0 ? last.slice(dot + 1) : "";
+    if (dot > 0) parts[parts.length - 1] = last.slice(0, dot);
+    const publicId = decodeURIComponent(parts.join("/"));
+
+    return cloudinary.utils.private_download_url(publicId, format, {
+      resource_type: "image",
+      type: "authenticated",
+      expires_at: Math.floor(Date.now() / 1000) + PRIVATE_LINK_TTL_SECONDS,
+    });
+  } catch {
+    return storedUrl;
+  }
+};
+
 export default cloudinary;
