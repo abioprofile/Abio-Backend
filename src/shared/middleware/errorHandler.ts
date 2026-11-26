@@ -34,7 +34,9 @@ export const globalErrorHandler: ErrorRequestHandler = (
 
   // Handle JSON syntax errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    errorMessage = err.message;
+    // Never send Prisma's raw message to the client: it contains the query,
+    // model/field names and server file paths. The full error is logged above.
+    errorMessage = "Invalid request.";
     statusCode = StatusCodes.BAD_REQUEST;
     if (err.code === "P2002") {
       const targetFields = err.meta?.target as string[];

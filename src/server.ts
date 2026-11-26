@@ -46,8 +46,10 @@ if (process.env.NODE_ENV === "development") {
 	app.use(morgan("dev"));
 }
 
-// Set the application to trust the reverse proxy
-app.set("trust proxy", true);
+// Trust exactly one reverse proxy hop (Railway's edge). `true` would trust
+// every X-Forwarded-For entry, letting a client spoof its IP and bypass the
+// login rate limiter. Bump this only if another proxy is added in front.
+app.set("trust proxy", 1);
 
 // Set up Pug as view engine
 app.set("view engine", "pug");

@@ -228,9 +228,11 @@ export const loginWithGoogle = catchAsync(async (req: Request, res: Response) =>
 
   setAuthCookies(res, accessToken, refreshToken);
 
-  // Prefer cookies for refresh; only put short-lived access in the URL fragment-free query.
+  // Hand the short-lived access token over in the URL fragment (#...), not the
+  // query string (?...). Browsers never send the fragment to any server, so the
+  // token stays out of server/proxy logs and Referer headers.
   return res.redirect(
-    `${env.CLIENT_URL}/auth/google/callback?accessToken=${accessToken}`
+    `${env.CLIENT_URL}/auth/google/callback#accessToken=${encodeURIComponent(accessToken)}`
   );
 });
 

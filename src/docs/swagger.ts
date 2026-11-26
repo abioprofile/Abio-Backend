@@ -1558,6 +1558,14 @@ Object.assign(
 swaggerDocument.tags.push(...giftAccountsTags);
 
 export const setupSwagger = (app: Express) => {
+  // The docs are a full map of every endpoint. Keep them off in production
+  // unless explicitly turned on with ENABLE_API_DOCS=true.
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ENABLE_API_DOCS !== "true"
+  ) {
+    return;
+  }
   app.use(
     "/api/v1/docs",
     swaggerUi.serve,
